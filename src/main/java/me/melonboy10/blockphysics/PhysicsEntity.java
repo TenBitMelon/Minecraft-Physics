@@ -158,9 +158,9 @@ public abstract class PhysicsEntity {
 //          else if (normal.angle(new Vector3f(0, 0, -1)) < Math.PI / 4) normal.set(0, 0, -1);
 //          else normal.set(0, 1, 0);
 
-//          particleVector(pointOfCollision, normal);
+          particleVector(pointOfCollision, normal);
 
-          Vector3f relativeVelocity = new Vector3f(velocity).sub(otherEntity.velocity);
+//          Vector3f relativeVelocity = new Vector3f(velocity).sub(otherEntity.velocity);
 
           Vector3f normalForce = new Vector3f(normal).mul(GRAVITY * mass * otherEntity.mass * ELASTICITY);
           applyForce(normalForce, pointOfCollision);
