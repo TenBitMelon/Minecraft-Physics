@@ -2,6 +2,8 @@ plugins {
   `java-library`
   id("io.papermc.paperweight.userdev") version "1.5.5"
   id("xyz.jpenilla.run-paper") version "2.1.0" // Adds runServer and runMojangMappedServer tasks for testing
+//  Lombok
+  id("io.freefair.lombok") version "8.6"
 }
 
 group = "me.melonboy10.blockphysics"
@@ -19,12 +21,12 @@ repositories {
 }
 
 dependencies {
-  paperweight.paperDevBundle("1.20.1-R0.1-SNAPSHOT")
+  paperweight.paperDevBundle("1.20.4-R0.1-SNAPSHOT")
   // paperweight.foliaDevBundle("1.20-R0.1-SNAPSHOT")
   // paperweight.devBundle("com.example.paperfork", "1.20-R0.1-SNAPSHOT")
 
   // Command API from maven
-  compileOnly("dev.jorel:commandapi-bukkit-core:9.1.0")
+  compileOnly("dev.jorel:commandapi-bukkit-core:9.3.0")
 }
 
 tasks {
