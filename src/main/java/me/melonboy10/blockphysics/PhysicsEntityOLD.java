@@ -1,7 +1,5 @@
 package me.melonboy10.blockphysics;
 
-import static me.melonboy10.blockphysics.PhysicsWorld.*;
-
 import org.bukkit.Location;
 import org.bukkit.Particle;
 import org.bukkit.block.data.BlockData;
@@ -9,6 +7,8 @@ import org.bukkit.entity.BlockDisplay;
 import org.bukkit.entity.EntityType;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
+
+import static me.melonboy10.blockphysics.PhysicsWorld.*;
 
 public abstract class PhysicsEntityOLD {
   Vector3f position;
@@ -21,7 +21,8 @@ public abstract class PhysicsEntityOLD {
   public record Collider(Vector3f position, float radius) {
     @Override
     public boolean equals(Object obj) {
-      if (obj instanceof Collider otherCollider) return position.equals(otherCollider.position) && radius == otherCollider.radius;
+      if (obj instanceof Collider otherCollider)
+        return position.equals(otherCollider.position) && radius == otherCollider.radius;
       return false;
     }
   }
@@ -34,7 +35,7 @@ public abstract class PhysicsEntityOLD {
   public PhysicsEntityOLD(Location position, int scale) {
     this.position = new Vector3f((float) position.x(), (float) position.y(), (float) position.z());
 
-    setColliders(new Collider[] {new Collider(new Vector3f(), 0.5f)});
+    setColliders(new Collider[]{new Collider(new Vector3f(), 0.5f)});
   }
 
   public void setColliders(Collider[] colliders) {
@@ -55,51 +56,51 @@ public abstract class PhysicsEntityOLD {
   public void update() {
     if (active) {
       velocity.add(0, -GRAVITY * DELTA_TIME, 0);
-//      float angularVelocityLength = angularVelocity.length();
-//      if (angularVelocityLength > 0) {
-//        float angle = angularVelocityLength * DELTA_TIME;
-//        Vector3f axis = new Vector3f(angularVelocity).normalize();
-//        rotation.rotateAxis(angle, axis);
-//      }
+      //      float angularVelocityLength = angularVelocity.length();
+      //      if (angularVelocityLength > 0) {
+      //        float angle = angularVelocityLength * DELTA_TIME;
+      //        Vector3f axis = new Vector3f(angularVelocity).normalize();
+      //        rotation.rotateAxis(angle, axis);
+      //      }
 
-//      position.add(velocity);
+      //      position.add(velocity);
       centerOfMass.add(velocity);
       for (Collider collider : colliders) {
         collider.position.add(velocity);
-//        collider.position.rotate(rotation);
+        //        collider.position.rotate(rotation);
       }
     } else {
       velocity.set(0, 0, 0);
       angularVelocity.set(0, 0, 0);
     }
 
-      Particle particle = active ? Particle.CRIT : Particle.CRIT_MAGIC;
+    Particle particle = active ? Particle.CRIT : Particle.CRIT_MAGIC;
     for (Collider collider : colliders) {
-      WORLD.spawnParticle(particle, position.x, position.y, position.z,  0, 0,0,0);
-      WORLD.spawnParticle(particle, position.x, position.y + collider.radius, position.z, 0, 0,0,0);
-      WORLD.spawnParticle(particle, position.x, position.y - collider.radius, position.z, 0, 0,0,0);
-      WORLD.spawnParticle(particle, position.x + collider.radius, position.y, position.z, 0, 0,0,0);
-      WORLD.spawnParticle(particle, position.x - collider.radius, position.y, position.z, 0, 0,0,0);
-      WORLD.spawnParticle(particle, position.x, position.y, position.z + collider.radius, 0, 0,0,0);
-      WORLD.spawnParticle(particle, position.x, position.y, position.z - collider.radius, 0, 0,0,0);
+      WORLD.spawnParticle(particle, position.x, position.y, position.z, 0, 0, 0, 0);
+      WORLD.spawnParticle(particle, position.x, position.y + collider.radius, position.z, 0, 0, 0, 0);
+      WORLD.spawnParticle(particle, position.x, position.y - collider.radius, position.z, 0, 0, 0, 0);
+      WORLD.spawnParticle(particle, position.x + collider.radius, position.y, position.z, 0, 0, 0, 0);
+      WORLD.spawnParticle(particle, position.x - collider.radius, position.y, position.z, 0, 0, 0, 0);
+      WORLD.spawnParticle(particle, position.x, position.y, position.z + collider.radius, 0, 0, 0, 0);
+      WORLD.spawnParticle(particle, position.x, position.y, position.z - collider.radius, 0, 0, 0, 0);
     }
   }
 
   abstract public void destroy();
 
-//  Collision detection
+  //  Collision detection
   public boolean collidesWith(PhysicsEntityOLD otherEntity) {
-//    float distance = position.distance(otherEntity.position);
-//    boolean collides = distance < (radius + otherEntity.radius);
-//    if (!collides) return false;
-//
-////    Move out of each other
-//    Vector3f direction = new Vector3f(position).sub(otherEntity.position).normalize();
-//    float overlap = (radius + otherEntity.radius) - distance;
-//    position.add(new Vector3f(direction).mul(overlap / 2));
-//    otherEntity.position.sub(new Vector3f(direction).mul(overlap / 2));
-//
-//    return true;
+    //    float distance = position.distance(otherEntity.position);
+    //    boolean collides = distance < (radius + otherEntity.radius);
+    //    if (!collides) return false;
+    //
+    ////    Move out of each other
+    //    Vector3f direction = new Vector3f(position).sub(otherEntity.position).normalize();
+    //    float overlap = (radius + otherEntity.radius) - distance;
+    //    position.add(new Vector3f(direction).mul(overlap / 2));
+    //    otherEntity.position.sub(new Vector3f(direction).mul(overlap / 2));
+    //
+    //    return true;
 
     for (Collider collider : colliders) {
       for (Collider otherCollider : otherEntity.colliders) {
@@ -112,44 +113,44 @@ public abstract class PhysicsEntityOLD {
   }
 
   public void onCollision(PhysicsEntityOLD otherEntity) {
-//    if (this == otherEntity) return;
-//    Vector3f collisionNormal = new Vector3f(position).sub(otherEntity.position).normalize();
-//    Vector3f relativeVelocity = new Vector3f(velocity).sub(otherEntity.velocity);
-//    float velocityAlongNormal = relativeVelocity.dot(collisionNormal);
-//    if (velocityAlongNormal > 0) return;
-//
-////    Vector3f pointOfContact = new Vector3f(position).add(new Vector3f(collisionNormal).mul(radius));
-//
-//    // 0.8 is the "restitution" coefficient aka bounciness
-//    float j = -(1 + ELASTICITY) * velocityAlongNormal / (1 / mass + 1 / otherEntity.mass);
-//    Vector3f impulse = new Vector3f(collisionNormal).mul(j);
-//
-//    // Apply linear impulse considering mass
-//    velocity.add(new Vector3f(impulse).div(mass));
-//    otherEntity.velocity.sub(new Vector3f(impulse).div(otherEntity.mass));
+    //    if (this == otherEntity) return;
+    //    Vector3f collisionNormal = new Vector3f(position).sub(otherEntity.position).normalize();
+    //    Vector3f relativeVelocity = new Vector3f(velocity).sub(otherEntity.velocity);
+    //    float velocityAlongNormal = relativeVelocity.dot(collisionNormal);
+    //    if (velocityAlongNormal > 0) return;
+    //
+    ////    Vector3f pointOfContact = new Vector3f(position).add(new Vector3f(collisionNormal).mul(radius));
+    //
+    //    // 0.8 is the "restitution" coefficient aka bounciness
+    //    float j = -(1 + ELASTICITY) * velocityAlongNormal / (1 / mass + 1 / otherEntity.mass);
+    //    Vector3f impulse = new Vector3f(collisionNormal).mul(j);
+    //
+    //    // Apply linear impulse considering mass
+    //    velocity.add(new Vector3f(impulse).div(mass));
+    //    otherEntity.velocity.sub(new Vector3f(impulse).div(otherEntity.mass));
 
     // Calculate the vector from the center of mass to the point of contact
-//    Vector3f r1 = new Vector3f(position).sub(pointOfContact);
-//    Vector3f r2 = new Vector3f(otherEntity.position).sub(pointOfContact);
-//    float mu = 0.5f; // Coefficient of friction
+    //    Vector3f r1 = new Vector3f(position).sub(pointOfContact);
+    //    Vector3f r2 = new Vector3f(otherEntity.position).sub(pointOfContact);
+    //    float mu = 0.5f; // Coefficient of friction
 
-//    Vector3f frictionCross = collisionNormal.normalize().cross(velocity.normalize());
-//    Vector3f forceFriction = collisionNormal.rotate(new Quaternionf(frictionCross.x, frictionCross.y, frictionCross.z, 1)).mul(mu * j);
-//
-//    Vector3f torque = r1.cross(forceFriction);
-//    Vector3f torque2 = r2.cross(forceFriction);
-//
-//    angularVelocity.add(new Vector3f(torque).div(momentOfInertia));
-//    otherEntity.angularVelocity.sub(new Vector3f(torque2).div(otherEntity.momentOfInertia));
+    //    Vector3f frictionCross = collisionNormal.normalize().cross(velocity.normalize());
+    //    Vector3f forceFriction = collisionNormal.rotate(new Quaternionf(frictionCross.x, frictionCross.y, frictionCross.z, 1)).mul(mu * j);
+    //
+    //    Vector3f torque = r1.cross(forceFriction);
+    //    Vector3f torque2 = r2.cross(forceFriction);
+    //
+    //    angularVelocity.add(new Vector3f(torque).div(momentOfInertia));
+    //    otherEntity.angularVelocity.sub(new Vector3f(torque2).div(otherEntity.momentOfInertia));
 
-//    Vector3f frictionDirection = new Vector3f(relativeVelocity).sub(collisionNormal.mul(relativeVelocity.dot(collisionNormal))).normalize();
-//    Vector3f forceFriction = new Vector3f(frictionDirection).mul(mu * j);
-//
-//    Vector3f torque = new Vector3f(r1).cross(forceFriction);
-//    Vector3f torque2 = new Vector3f(r2).cross(forceFriction);
-//
-//    angularVelocity.add(new Vector3f(torque).div(momentOfInertia));
-//    otherEntity.angularVelocity.sub(new Vector3f(torque2).div(otherEntity.momentOfInertia));
+    //    Vector3f frictionDirection = new Vector3f(relativeVelocity).sub(collisionNormal.mul(relativeVelocity.dot(collisionNormal))).normalize();
+    //    Vector3f forceFriction = new Vector3f(frictionDirection).mul(mu * j);
+    //
+    //    Vector3f torque = new Vector3f(r1).cross(forceFriction);
+    //    Vector3f torque2 = new Vector3f(r2).cross(forceFriction);
+    //
+    //    angularVelocity.add(new Vector3f(torque).div(momentOfInertia));
+    //    otherEntity.angularVelocity.sub(new Vector3f(torque2).div(otherEntity.momentOfInertia));
 
   }
 

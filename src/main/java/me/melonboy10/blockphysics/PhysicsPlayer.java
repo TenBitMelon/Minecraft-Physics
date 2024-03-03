@@ -1,7 +1,5 @@
 package me.melonboy10.blockphysics;
 
-import org.bukkit.entity.Player;
-
 //public class PhysicsPlayer extends PhysicsEntity {
 //  Player player;
 //

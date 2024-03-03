@@ -1,6 +1,6 @@
 plugins {
   `java-library`
-  id("io.papermc.paperweight.userdev") version "1.5.5"
+  id("io.papermc.paperweight.userdev") version "1.5.11"
   id("xyz.jpenilla.run-paper") version "2.1.0" // Adds runServer and runMojangMappedServer tasks for testing
 //  Lombok
   id("io.freefair.lombok") version "8.6"
@@ -57,6 +57,12 @@ tasks {
     filesMatching("plugin.yml") {
       expand(props)
     }
+  }
+  jar {
+    // This is an example of how you might change the output location for jar. It's recommended not to do this
+    // for a variety of reasons, however it's asked frequently enough that an example of how to do it is included here.
+    // Name with random at the end
+    destinationDirectory.set(file("C:\\Users\\Aidan\\Desktop\\Minecraft Servers\\Spigot Server (Player Machine Learning)\\plugins\\update"))
   }
   reobfJar {
     // This is an example of how you might change the output location for reobfJar. It's recommended not to do this

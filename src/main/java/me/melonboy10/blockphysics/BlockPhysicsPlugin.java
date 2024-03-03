@@ -1,61 +1,41 @@
 package me.melonboy10.blockphysics;
 
-import com.destroystokyo.paper.brigadier.BukkitBrigadierCommandSource;
-import com.destroystokyo.paper.event.brigadier.CommandRegisteredEvent;
-import com.mojang.brigadier.Command;
-import com.mojang.brigadier.arguments.IntegerArgumentType;
-import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import com.mojang.brigadier.tree.LiteralCommandNode;
-
-import java.util.function.Consumer;
-
-import dev.jorel.commandapi.CommandAPICommand;
 import dev.jorel.commandapi.CommandTree;
 import dev.jorel.commandapi.arguments.*;
-import net.minecraft.commands.CommandSourceStack;
-import net.minecraft.commands.Commands;
-import net.minecraft.commands.arguments.blocks.BlockInput;
-import net.minecraft.core.BlockPos;
-import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.level.ServerLevel;
-import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.phys.Vec3;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
-import org.bukkit.block.Block;
-import org.bukkit.block.BlockState;
-import org.bukkit.block.data.BlockData;
 import org.bukkit.Material;
+import org.bukkit.Particle;
+import org.bukkit.block.Block;
+import org.bukkit.block.data.BlockData;
+import org.bukkit.entity.Interaction;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.player.PlayerJoinEvent;
-import org.bukkit.event.player.PlayerLoginEvent;
+import org.bukkit.event.player.PlayerInteractEntityEvent;
+import org.bukkit.event.player.PlayerMoveEvent;
+import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.util.Vector;
 import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import org.checkerframework.framework.qual.DefaultQualifier;
 import org.joml.Vector3d;
-import org.joml.Vector3f;
 
-import static me.melonboy10.blockphysics.PhysicsWorld.DELTA_TIME;
-import static me.melonboy10.blockphysics.PhysicsWorld.STEPS_PER_SECOND;
-import static net.kyori.adventure.text.Component.text;
-import static net.minecraft.commands.Commands.argument;
-import static net.minecraft.commands.Commands.literal;
+import static me.melonboy10.blockphysics.PhysicsWorld.*;
 
 @DefaultQualifier(NonNull.class)
 public final class BlockPhysicsPlugin extends JavaPlugin implements Listener {
 
   public static BlockPhysicsPlugin PLUGIN;
-  public static final PhysicsWorld world = new PhysicsWorld();
 
   @Override
   public void onEnable() {
     PLUGIN = this;
+    new PhysicsWorld();
     this.getServer().getPluginManager().registerEvents(this, this);
+
     System.out.println(Bukkit.getWorlds().get(0));
-    PhysicsWorld.WORLD = Bukkit.getWorlds().get(0);
-    PhysicsWorld.debugDisplay = PhysicsEntity.createTextDisplay(Bukkit.getOnlinePlayers().stream().findFirst().get().getLocation(), "");
 
     //    if (Bukkit.getOnlinePlayers().size() > 0) {
     //      //      world.addEntity(new FloorPlane(Bukkit.getPlayer("melonboy10").getLocation(), 0.5f,
@@ -71,30 +51,31 @@ public final class BlockPhysicsPlugin extends JavaPlugin implements Listener {
       })
       .then(new LiteralArgument("stop")
               .executesPlayer((player, args) -> {
-                PhysicsWorld.STOP_NOW = true;
+                STOP_NOW = true;
               }))
       .then(new LiteralArgument("start")
               .executesPlayer((player, args) -> {
-                PhysicsWorld.STOP_NOW = false;
+                STOP_NOW = false;
               }))
 
       .then(new LiteralArgument("step")
               .then(new IntegerArgument("steps").setOptional(true)
                       .executesPlayer((player, args) -> {
                         int steps = (int) args.getOrDefault("steps", 1);
+                        STOP_NOW = false;
                         for (int i = 0; i < steps; i++)
-                          world.update();
+                          update();
+                        STOP_NOW = true;
                       })))
       .then(new LiteralArgument("debug")
               .executesPlayer((player, args) -> {
-                PhysicsWorld.DEBUG = !PhysicsWorld.DEBUG;
+                DEBUG = !DEBUG;
               })
               .then(new IntegerArgument("level")
                       .executesPlayer((player, args) -> {
                         int value = (int) args.get("level");
-                        value = Math.max(1, Math.min(5, value));
-                        if (value == PhysicsWorld.DEBUG_LEVEL) PhysicsWorld.DEBUG = !PhysicsWorld.DEBUG;
-                        PhysicsWorld.DEBUG_LEVEL = value;
+                        if (value == DEBUG_LEVEL) DEBUG = !DEBUG;
+                        DEBUG_LEVEL = value;
                       })))
       .then(new LiteralArgument("time")
               .then(new FloatArgument("deltaTime")
@@ -104,7 +85,7 @@ public final class BlockPhysicsPlugin extends JavaPlugin implements Listener {
       .then(new LiteralArgument("gravity")
               .then(new FloatArgument("gravity")
                       .executesPlayer((player, args) -> {
-                        PhysicsWorld.GRAVITY = (float) args.get("gravity");
+                        GRAVITY = (float) args.get("gravity");
                       })))
       .then(
         new LiteralArgument("summon")
@@ -113,18 +94,18 @@ public final class BlockPhysicsPlugin extends JavaPlugin implements Listener {
             Material mat = null;
             while (mat == null || !mat.isBlock())
               mat = Material.values()[(int) (Math.random() * Material.values().length)];
-            world.addEntity(new PhysicsBlock(player.getLocation(), mat.createBlockData()));
+            addEntity(new PhysicsBlock(player.getLocation(), mat.createBlockData()));
           })
           .then(new BlockStateArgument("block")
                   .executesPlayer((player, args) -> {
                     System.out.println("Summoning block");
-                    world.addEntity(new PhysicsBlock(player.getLocation(), (BlockData) args.get("block")));
+                    addEntity(new PhysicsBlock(player.getLocation(), (BlockData) args.get("block")));
                   })
                   .then(new BooleanArgument("active")
                           .executesPlayer((player, args) -> {
                             PhysicsBlock block = new PhysicsBlock(player.getLocation(), (BlockData) args.get("block"));
                             block.active = (boolean) args.get("active");
-                            world.addEntity(block);
+                            addEntity(block);
                           }))
           ))
       .then(
@@ -140,7 +121,7 @@ public final class BlockPhysicsPlugin extends JavaPlugin implements Listener {
 
                                       @Override
                                       public void run() {
-                                        if (PhysicsWorld.STOP_NOW) return;
+                                        if (STOP_NOW) return;
 
                                         Material mat = null;
                                         while ((mat == null || !mat.isBlock()) && block == null)
@@ -151,7 +132,7 @@ public final class BlockPhysicsPlugin extends JavaPlugin implements Listener {
                                         } else {
                                           entity.velocity = new Vector3d((float) (Math.random() - 0.5) * 10, 10, (float) (Math.random() - 0.5) * 10);
                                         }
-                                        world.addEntity(entity);
+                                        addEntity(entity);
                                       }
                                     }.runTaskTimer(this, 0, (int) args.getOrDefault("rate", 20));
                                   }))
@@ -163,7 +144,7 @@ public final class BlockPhysicsPlugin extends JavaPlugin implements Listener {
                     Material mat = null;
                     while (mat == null || !mat.isBlock())
                       mat = Material.values()[(int) (Math.random() * Material.values().length)];
-                    world.addEntity(new PhysicsBlock(player.getLocation().add(i * 1.1, 0, j * 1.1), mat.createBlockData()));
+                    addEntity(new PhysicsBlock(player.getLocation().add(i * 1.1, 0, j * 1.1), mat.createBlockData()));
                   }
                 }
               })
@@ -171,7 +152,7 @@ public final class BlockPhysicsPlugin extends JavaPlugin implements Listener {
                       .executesPlayer((player, args) -> {
                         for (int i = 0; i < 5; i++) {
                           for (int j = 0; j < 5; j++) {
-                            world.addEntity(new PhysicsBlock(player.getLocation().add(i * 1.1, 0, j * 1.1), (BlockData) args.get("block")));
+                            addEntity(new PhysicsBlock(player.getLocation().add(i * 1.1, 0, j * 1.1), (BlockData) args.get("block")));
                           }
                         }
                       })
@@ -180,20 +161,38 @@ public final class BlockPhysicsPlugin extends JavaPlugin implements Listener {
                                 int w = (int) args.get("width");
                                 for (int i = 0; i < w; i++) {
                                   for (int j = 0; j < w; j++) {
-                                    world.addEntity(new PhysicsBlock(player.getLocation().add(i * 1.1, 0, j * 1.1), (BlockData) args.get("block")));
+                                    addEntity(new PhysicsBlock(player.getLocation().add(i * 1.1, 0, j * 1.1), (BlockData) args.get("block")));
                                   }
                                 }
                               }))))
       .then(new LiteralArgument("floor")
               .executesPlayer((player, args) -> {
-                world.addEntity(new FloorPlane(player.getLocation(), 0.5f, 10));
+                addEntity(new FloorPlane(player.getLocation(), 10));
               }).then(new IntegerArgument("scale")
                         .executesPlayer((player, args) -> {
-                          world.addEntity(new FloorPlane(player.getLocation(), 0.5f, (int) args.get("scale")));
+                          addEntity(new FloorPlane(player.getLocation(), (int) args.get("scale")));
                         })))
       .then(new LiteralArgument("test")
               .executesPlayer((player, args) -> {
-                //          world.addEntity(new BlockGroup(player.getLocation(), new BlockData[][][] {
+                DEBUG_LEVEL = 2;
+                DEBUG = true;
+                GRAVITY = 0;
+
+                addEntity(new PhysicsBlock(player.getLocation().add(1, 1, 0), Material.COBWEB.createBlockData()) {{
+                  angularMomentum = new Vector3d(1, 0, 0);
+                }});
+                addEntity(new PhysicsBlock(player.getLocation().add(-1, 1, 0), Material.COBWEB.createBlockData()) {{
+                  angularMomentum = new Vector3d(-1, 0, 0);
+                }});
+                addEntity(new PhysicsBlock(player.getLocation().add(0, 1, 1), Material.COBWEB.createBlockData()) {{
+                  angularMomentum = new Vector3d(0, 0, 1);
+                }});
+                addEntity(new PhysicsBlock(player.getLocation().add(0, 1, -1), Material.COBWEB.createBlockData()) {{
+                  angularMomentum = new Vector3d(0, 0, -1);
+                }});
+
+
+                //          PhysicsWorld.addEntity(new BlockGroup(player.getLocation(), new BlockData[][][] {
                 //            {
                 //              { Material.STONE.createBlockData(), Material.STONE.createBlockData(), Material.STONE.createBlockData() },
                 //              { Material.STONE.createBlockData(), Material.STONE.createBlockData(), Material.STONE.createBlockData() },
@@ -232,17 +231,29 @@ public final class BlockPhysicsPlugin extends JavaPlugin implements Listener {
                                     }
                                   }
                                 }
-                                //              world.addEntity(new BlockGroup(player.getLocation(), blockData));
+                                //              PhysicsWorld.addEntity(new BlockGroup(player.getLocation(), blockData));
                               }))))
+      .then(new LiteralArgument("particles")
+              .executesPlayer((player, args) -> {
+                new BukkitRunnable() {
+                  Location location = player.getLocation();
+
+                  @Override
+                  public void run() {
+                    Particle[] values = Particle.values();
+                    for (int i = 0; i < values.length; i++) {
+                      Particle particle = values[i];
+                      location.getWorld().spawnParticle(particle, location.clone().add(i % 10 * 5, 0, i / 10 * 5), 1);
+                    }
+                  }
+                }.runTaskTimer(this, 0, 1);
+              }))
       .register();
 
     new BukkitRunnable() {
       @Override
       public void run() {
-        if (!PhysicsWorld.STOP_NOW)
-          for (int i = 0; i < STEPS_PER_SECOND; i++) {
-            world.update();
-          }
+        PhysicsWorld.update();
       }
     }.runTaskTimer(this, 0, 1);
   }
@@ -250,6 +261,35 @@ public final class BlockPhysicsPlugin extends JavaPlugin implements Listener {
   @Override
   public void onDisable() {
     super.onDisable();
-    world.clear();
+    PhysicsWorld.clear();
+  }
+
+  @Nullable
+  public PhysicsEntity playerMovingBlock = null;
+
+  @EventHandler
+  public void onEntityInteract(PlayerInteractEntityEvent event) {
+    if (event.getHand() == EquipmentSlot.OFF_HAND) return;
+    if (event.getRightClicked() instanceof Interaction) {
+      if (playerMovingBlock != null) {
+        playerMovingBlock = null;
+        return;
+      }
+
+      for (PhysicsEntity entity : entities) {
+        if (entity instanceof InteractiveEntity && ((InteractiveEntity) entity).getInteraction().equals(event.getRightClicked())) {
+          playerMovingBlock = entity;
+          return;
+        }
+      }
+    }
+  }
+
+  @EventHandler
+  public void onPlayerMove(PlayerMoveEvent event) {
+    if (playerMovingBlock != null) {
+      playerMovingBlock.centerOfMass = event.getPlayer().getLocation().getDirection().toVector3d().mul(2).add(event.getPlayer().getEyeLocation().toVector().toVector3d());
+      playerMovingBlock.velocity.set(0);
+    }
   }
 }

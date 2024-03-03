@@ -10,6 +10,7 @@ public class Mesh {
   private @Getter Vector3d[] vertices;
   private @Getter Matrix3d inverseInertiaTensor;
   private @Getter float volume;
+  private @Getter float inverseMass;
 
   public Mesh(BoundingBox[] regions) {
     this.regions = regions;
@@ -35,13 +36,6 @@ public class Mesh {
     calculateVertices();
   }
 
-  public BoundingBox isContained(Vector3d point) {
-    for (BoundingBox region : regions) {
-      if (region.contains(point.x, point.y, point.z)) return region;
-    }
-    return null;
-  }
-
   private void calculateVertices() {
     vertices = new Vector3d[regions.length * 8];
     for (int i = 0; i < regions.length; i++) {
@@ -64,6 +58,7 @@ public class Mesh {
       volume += size.x * size.y * size.z;
     }
     this.volume = volume;
+    this.inverseMass = 1 / volume;
   }
 
   private Vector3d getCenterOfMass() {
@@ -90,5 +85,33 @@ public class Mesh {
 
   public float getMass() {
     return volume;
+  }
+
+  public BoundingBox isContained(Vector3d point) {
+    for (BoundingBox region : regions) {
+      if (region.contains(point.x, point.y, point.z)) return region;
+    }
+    return null;
+  }
+
+  public Vector3d getFurthestPoint(Vector3d direction) {
+    Vector3d furthestPoint = new Vector3d();
+    double largestDotProduct = -Float.MAX_VALUE;
+
+    for (Vector3d vertex : vertices) {
+      double dotProduct = vertex.dot(direction);
+      if (dotProduct > largestDotProduct) {
+        largestDotProduct = dotProduct;
+        furthestPoint = vertex;
+      }
+    }
+
+    return furthestPoint;
+  }
+
+  public Vector3d getMinkowskiDifferencePoint(Mesh other, Vector3d direction) {
+    Vector3d furthestPoint = getFurthestPoint(direction);
+    Vector3d otherFurthestPoint = other.getFurthestPoint(direction.negate(new Vector3d()));
+    return furthestPoint.sub(otherFurthestPoint, new Vector3d());
   }
 }
