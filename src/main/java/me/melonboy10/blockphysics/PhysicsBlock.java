@@ -1,14 +1,13 @@
 package me.melonboy10.blockphysics;
 
+import net.minecraft.world.level.block.state.BlockState;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.BlockDisplay;
 import org.bukkit.entity.Interaction;
 import org.bukkit.entity.TextDisplay;
 import org.bukkit.util.Transformation;
-import org.joml.AxisAngle4d;
-import org.joml.AxisAngle4f;
-import org.joml.Quaterniond;
 import org.joml.Vector3d;
 
 public class PhysicsBlock extends PhysicsEntity implements InteractiveEntity {
@@ -18,6 +17,9 @@ public class PhysicsBlock extends PhysicsEntity implements InteractiveEntity {
 
   public PhysicsBlock(Location position, BlockData blockData) {
     super(position);
+
+//    BlockState blockState = (BlockState) blockData;
+//    blockState.getBlock().getShape(blockState, null, null, null);
 
     blockDisplay = createBlockDisplay(position.clone().subtract(0.5, 0.5, 0.5), blockData);
     debugDisplay = createTextDisplay(position.clone().add(0, 1, 0), "");
@@ -32,7 +34,6 @@ public class PhysicsBlock extends PhysicsEntity implements InteractiveEntity {
   @Override
   public void update() {
     super.update();
-
     blockDisplay.teleport(new Location(blockDisplay.getWorld(), centerOfMass.x - 0.5, centerOfMass.y - 0.5, centerOfMass.z - 0.5));
 
     Transformation transform = blockDisplay.getTransformation();
@@ -57,6 +58,7 @@ public class PhysicsBlock extends PhysicsEntity implements InteractiveEntity {
         """.formatted(centerOfMass, velocity, "angularMomentum", new Vector3d(angularMomentum).rotate(rotation.invert()), (mesh.getInverseInertiaTensor()), new Vector3d(angularMomentum).rotate(rotation.invert()).mul(mesh.getInverseInertiaTensor()).rotate(rotation)));
     else debugDisplay.setText("");
   }
+
 
   @Override
   public void destroy() {

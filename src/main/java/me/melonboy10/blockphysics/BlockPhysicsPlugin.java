@@ -16,10 +16,11 @@ import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
-import org.bukkit.util.Vector;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.checkerframework.framework.qual.DefaultQualifier;
+import org.joml.AxisAngle4f;
+import org.joml.Quaterniond;
 import org.joml.Vector3d;
 
 import static me.melonboy10.blockphysics.PhysicsWorld.*;
@@ -179,36 +180,38 @@ public final class BlockPhysicsPlugin extends JavaPlugin implements Listener {
                 GRAVITY = 0;
 
                 addEntity(new PhysicsBlock(player.getLocation().add(1, 1, 0), Material.COBWEB.createBlockData()) {{
-                  angularMomentum = new Vector3d(1, 0, 0);
+//                  angularMomentum = new Vector3d(1, 0, 0);
+                  rotation = new Quaterniond(new AxisAngle4f((float) (Math.PI / 4), 0, 0, 1));
                 }});
-                addEntity(new PhysicsBlock(player.getLocation().add(-1, 1, 0), Material.COBWEB.createBlockData()) {{
-                  angularMomentum = new Vector3d(-1, 0, 0);
-                }});
+//                addEntity(new PhysicsBlock(player.getLocation().add(-1, 1, 0), Material.COBWEB.createBlockData()) {{
+//                  angularMomentum = new Vector3d(-1, 0, 0);
+//                }});
                 addEntity(new PhysicsBlock(player.getLocation().add(0, 1, 1), Material.COBWEB.createBlockData()) {{
-                  angularMomentum = new Vector3d(0, 0, 1);
+                  //                  angularMomentum = new Vector3d(0, 0, 1);
+                  rotation = new Quaterniond(new AxisAngle4f((float) (Math.PI / 4), 1, 0, 0));
                 }});
-                addEntity(new PhysicsBlock(player.getLocation().add(0, 1, -1), Material.COBWEB.createBlockData()) {{
-                  angularMomentum = new Vector3d(0, 0, -1);
-                }});
+//                addEntity(new PhysicsBlock(player.getLocation().add(0, 1, -1), Material.COBWEB.createBlockData()) {{
+//                  angularMomentum = new Vector3d(0, 0, -1);
+//                }});
 
 
-                //          PhysicsWorld.addEntity(new BlockGroup(player.getLocation(), new BlockData[][][] {
-                //            {
-                //              { Material.STONE.createBlockData(), Material.STONE.createBlockData(), Material.STONE.createBlockData() },
-                //              { Material.STONE.createBlockData(), Material.STONE.createBlockData(), Material.STONE.createBlockData() },
-                //              { Material.STONE.createBlockData(), Material.STONE.createBlockData(), Material.STONE.createBlockData() },
-                //            },
-                //            {
-                //              { Material.STONE.createBlockData(), Material.STONE.createBlockData(), Material.STONE.createBlockData() },
-                //              { Material.STONE.createBlockData(), Material.STONE.createBlockData(), Material.STONE.createBlockData() },
-                //              { Material.STONE.createBlockData(), Material.STONE.createBlockData(), Material.STONE.createBlockData() },
-                //            },
-                //            {
-                //              { Material.STONE.createBlockData(), Material.STONE.createBlockData(), Material.STONE.createBlockData() },
-                //              { Material.STONE.createBlockData(), Material.STONE.createBlockData(), Material.STONE.createBlockData() },
-                //              { Material.STONE.createBlockData(), Material.STONE.createBlockData(), Material.STONE.createBlockData() }
-                //            }
-                //          }));
+//          PhysicsWorld.addEntity(new BlockGroup(player.getLocation(), new BlockData[][][] {
+//            {
+//              { Material.STONE.createBlockData(), Material.STONE.createBlockData(), Material.STONE.createBlockData() },
+//              { Material.STONE.createBlockData(), Material.STONE.createBlockData(), Material.STONE.createBlockData() },
+//              { Material.STONE.createBlockData(), Material.STONE.createBlockData(), Material.STONE.createBlockData() },
+//            },
+//            {
+//              { Material.STONE.createBlockData(), Material.STONE.createBlockData(), Material.STONE.createBlockData() },
+//              { Material.STONE.createBlockData(), Material.STONE.createBlockData(), Material.STONE.createBlockData() },
+//              { Material.STONE.createBlockData(), Material.STONE.createBlockData(), Material.STONE.createBlockData() },
+//            },
+//            {
+//              { Material.STONE.createBlockData(), Material.STONE.createBlockData(), Material.STONE.createBlockData() },
+//              { Material.STONE.createBlockData(), Material.STONE.createBlockData(), Material.STONE.createBlockData() },
+//              { Material.STONE.createBlockData(), Material.STONE.createBlockData(), Material.STONE.createBlockData() }
+//            }
+//          }));
               }))
       .then(new LiteralArgument("area")
               .then(new LocationArgument("location1")

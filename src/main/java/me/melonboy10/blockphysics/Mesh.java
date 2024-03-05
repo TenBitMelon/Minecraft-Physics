@@ -3,6 +3,7 @@ package me.melonboy10.blockphysics;
 import lombok.Getter;
 import org.bukkit.util.BoundingBox;
 import org.joml.Matrix3d;
+import org.joml.Quaterniond;
 import org.joml.Vector3d;
 
 public class Mesh {
@@ -94,11 +95,15 @@ public class Mesh {
     return null;
   }
 
-  public Vector3d getFurthestPoint(Vector3d direction) {
+  public Vector3d getFurthestPoint(Vector3d direction, Quaterniond relativeRotation) {
     Vector3d furthestPoint = new Vector3d();
     double largestDotProduct = -Float.MAX_VALUE;
 
     for (Vector3d vertex : vertices) {
+      if (relativeRotation != null) {
+        vertex = vertex.rotate(relativeRotation, new Vector3d());
+      }
+
       double dotProduct = vertex.dot(direction);
       if (dotProduct > largestDotProduct) {
         largestDotProduct = dotProduct;
@@ -109,9 +114,9 @@ public class Mesh {
     return furthestPoint;
   }
 
-  public Vector3d getMinkowskiDifferencePoint(Mesh other, Vector3d direction) {
-    Vector3d furthestPoint = getFurthestPoint(direction);
-    Vector3d otherFurthestPoint = other.getFurthestPoint(direction.negate(new Vector3d()));
+  public Vector3d getMinkowskiDifferencePoint(Mesh other, Vector3d direction, Quaterniond relativeRotation) {
+    Vector3d furthestPoint = getFurthestPoint(direction, null);
+    Vector3d otherFurthestPoint = other.getFurthestPoint(direction.negate(new Vector3d()), relativeRotation);
     return furthestPoint.sub(otherFurthestPoint, new Vector3d());
   }
 }
