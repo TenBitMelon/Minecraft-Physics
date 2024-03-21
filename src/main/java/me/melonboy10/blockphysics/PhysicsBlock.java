@@ -1,14 +1,15 @@
 package me.melonboy10.blockphysics;
 
-import net.minecraft.world.level.block.state.BlockState;
 import org.bukkit.Location;
-import org.bukkit.Material;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.BlockDisplay;
 import org.bukkit.entity.Interaction;
 import org.bukkit.entity.TextDisplay;
+import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Transformation;
 import org.joml.Vector3d;
+
+import java.util.Collection;
 
 public class PhysicsBlock extends PhysicsEntity implements InteractiveEntity {
   BlockDisplay blockDisplay;
@@ -18,8 +19,17 @@ public class PhysicsBlock extends PhysicsEntity implements InteractiveEntity {
   public PhysicsBlock(Location position, BlockData blockData) {
     super(position);
 
-//    BlockState blockState = (BlockState) blockData;
-//    blockState.getBlock().getShape(blockState, null, null, null);
+    Collection<BoundingBox> boundingBoxes = blockData.getCollisionShape(new Location(position.getWorld(), 0, 0, 0)).getBoundingBoxes();
+//    Collection<BoundingBox> boundingBoxes = new CraftVoxelShape(((CraftBlockData) blockData).getState().getVisualShape(((CraftWorld) position.getWorld()).getHandle(), CraftLocation.toBlockPosition(new Location(position.getWorld(), 0, 0, 0)), CollisionContext.empty())).getBoundingBoxes();
+    if (boundingBoxes.isEmpty()) boundingBoxes.add(new BoundingBox(0, 0, 0, 1, 1, 1));
+    mesh.setRegions(boundingBoxes);
+
+//    for (BoundingBox boundingBox : boundingBoxes) {
+//      BlockDisplay tmpBlockDisplay = createBlockDisplay(position.clone().add(boundingBox.getMinX(), boundingBox.getMinY(), boundingBox.getMinZ()), Material.YELLOW_STAINED_GLASS.createBlockData());
+//      Transformation transform = tmpBlockDisplay.getTransformation();
+//      transform.getScale().set(boundingBox.getWidthX(), boundingBox.getHeight(), boundingBox.getWidthZ());
+//      tmpBlockDisplay.setTransformation(transform);
+//    }
 
     blockDisplay = createBlockDisplay(position.clone().subtract(0.5, 0.5, 0.5), blockData);
     debugDisplay = createTextDisplay(position.clone().add(0, 1, 0), "");
@@ -52,10 +62,7 @@ public class PhysicsBlock extends PhysicsEntity implements InteractiveEntity {
         Position: %s
         Velocity: %s
         Angular Momentum: %s
-        Rotate Momentum: %s
-        Inertia Tensor: %s
-        Angular Velocity: %s          
-        """.formatted(centerOfMass, velocity, "angularMomentum", new Vector3d(angularMomentum).rotate(rotation.invert()), (mesh.getInverseInertiaTensor()), new Vector3d(angularMomentum).rotate(rotation.invert()).mul(mesh.getInverseInertiaTensor()).rotate(rotation)));
+        """.formatted(centerOfMass, velocity, angularVelocity));
     else debugDisplay.setText("");
   }
 

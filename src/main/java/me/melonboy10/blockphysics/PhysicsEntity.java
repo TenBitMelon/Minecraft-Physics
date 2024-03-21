@@ -3,22 +3,21 @@ package me.melonboy10.blockphysics;
 import org.bukkit.Color;
 import org.bukkit.Location;
 import org.bukkit.Particle;
+import org.bukkit.World;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.*;
 import org.bukkit.util.BoundingBox;
-import org.joml.Quaterniond;
-import org.joml.Vector2d;
-import org.joml.Vector3d;
-import org.joml.Vector4d;
+import org.joml.*;
 import oshi.util.tuples.Pair;
 
+import java.lang.Math;
 import java.util.ArrayList;
 import java.util.Arrays;
 
 import static me.melonboy10.blockphysics.PhysicsWorld.*;
 
 public abstract class PhysicsEntity {
-  public static final boolean COLLISION_DEBUG_RENDERING = true;
+  public static final boolean COLLISION_DEBUG_RENDERING = false;
   public static final Vector3d COLLISION_DEBUG_OFFSET = new Vector3d(0, 90, 50);
   public static final Color[] COLORS = new Color[]{Color.GREEN, Color.BLUE, Color.YELLOW, Color.PURPLE, Color.ORANGE, Color.TEAL, Color.LIME, Color.AQUA, Color.FUCHSIA, Color.MAROON, Color.OLIVE, Color.NAVY, Color.SILVER, Color.GRAY, Color.RED, Color.WHITE, Color.BLACK};
 
@@ -28,14 +27,40 @@ public abstract class PhysicsEntity {
   Vector3d centerOfMass;
   Vector3d velocity;
   //  Vector3d angularVelocity;
-  Vector3d angularMomentum;
+  Vector3d angularVelocity;
   Quaterniond rotation;
   double elasticity = 0.8;
   double staticFriction = 0.4;
   double dynamicFriction = 0.5;
   //  Vector3d angularVelocity = new Vector3d();
 
-  public record ParticleData(Particle particle, Vector3d location) {}
+  public static class ParticleData {
+    protected final Particle particle;
+    protected final Vector3d location;
+
+    public ParticleData(Particle particle, Vector3d location) {
+      this.particle = particle;
+      this.location = location;
+    }
+
+    public void spawn(World world) {
+      WORLD.spawnParticle(particle, location.x, location.y, location.z, 0, 0, 0, 0);
+    }
+  }
+
+  public static class ColorParticleData extends ParticleData {
+    private final Color color;
+
+    public ColorParticleData(Color color, Vector3d location) {
+      super(Particle.REDSTONE, location);
+      this.color = color;
+    }
+
+    @Override
+    public void spawn(World world) {
+      WORLD.spawnParticle(particle, location.x, location.y, location.z, 0, 0, 0, 0, new Particle.DustOptions(color, 0.1f));
+    }
+  }
 
   ArrayList<ParticleData> particles = new ArrayList<>();
 
@@ -43,7 +68,7 @@ public abstract class PhysicsEntity {
     this.mesh = mesh;
     this.centerOfMass = position.toVector().toVector3d();
     this.velocity = new Vector3d();
-    this.angularMomentum = new Vector3d(0, 0, 0);
+    this.angularVelocity = new Vector3d(0, 0, 0);
     //    this.angularVelocity = new Vector3d();
     this.rotation = new Quaterniond();
   }
@@ -56,38 +81,27 @@ public abstract class PhysicsEntity {
     /* PARTICLES FOR WHERE IT IS */
     //    System.out.println(this.hashCode());
     if (DEBUG) {
-      particles.clear();
       Particle particle = active ? Particle.ELECTRIC_SPARK : Particle.SCRAPE;
       for (BoundingBox region : mesh.getRegions()) {
-        Vector3d particlePos = region.getCenter().toVector3d();
-        particle(particle, particlePos);
-        if (DEBUG_LEVEL < 2) continue;
-        particle(particle, particlePos.add(region.getMinX(), region.getMinY(), region.getMinZ(), new Vector3d()).rotate(rotation).add(centerOfMass));
-        particle(particle, particlePos.add(region.getMaxX(), region.getMinY(), region.getMinZ(), new Vector3d()).rotate(rotation).add(centerOfMass));
-        particle(particle, particlePos.add(region.getMinX(), region.getMaxY(), region.getMinZ(), new Vector3d()).rotate(rotation).add(centerOfMass));
-        particle(particle, particlePos.add(region.getMaxX(), region.getMaxY(), region.getMinZ(), new Vector3d()).rotate(rotation).add(centerOfMass));
-        particle(particle, particlePos.add(region.getMinX(), region.getMinY(), region.getMaxZ(), new Vector3d()).rotate(rotation).add(centerOfMass));
-        particle(particle, particlePos.add(region.getMaxX(), region.getMinY(), region.getMaxZ(), new Vector3d()).rotate(rotation).add(centerOfMass));
-        particle(particle, particlePos.add(region.getMinX(), region.getMaxY(), region.getMaxZ(), new Vector3d()).rotate(rotation).add(centerOfMass));
-        particle(particle, particlePos.add(region.getMaxX(), region.getMaxY(), region.getMaxZ(), new Vector3d()).rotate(rotation).add(centerOfMass));
-
-        if (DEBUG_LEVEL < 3) continue;
-        particle(particle, particlePos.add(region.getCenterX(), region.getMinY(), region.getCenterZ(), new Vector3d()).rotate(rotation).add(centerOfMass));
-        particle(particle, particlePos.add(region.getCenterX(), region.getMaxY(), region.getCenterZ(), new Vector3d()).rotate(rotation).add(centerOfMass));
-        particle(particle, particlePos.add(region.getMinX(), region.getCenterY(), region.getCenterZ(), new Vector3d()).rotate(rotation).add(centerOfMass));
-        particle(particle, particlePos.add(region.getMaxX(), region.getCenterY(), region.getCenterZ(), new Vector3d()).rotate(rotation).add(centerOfMass));
-        particle(particle, particlePos.add(region.getCenterX(), region.getCenterY(), region.getMinZ(), new Vector3d()).rotate(rotation).add(centerOfMass));
-        particle(particle, particlePos.add(region.getCenterX(), region.getCenterY(), region.getMaxZ(), new Vector3d()).rotate(rotation).add(centerOfMass));
+        Vector3d min = new Vector3d(region.getMinX(), region.getMinY(), region.getMinZ());
+        Vector3d max = new Vector3d(region.getMaxX(), region.getMaxY(), region.getMaxZ());
+        particle(particle, new Vector3d(min.x, min.y, max.z).rotate(rotation).add(centerOfMass));
+        particle(particle, new Vector3d(min.x, max.y, min.z).rotate(rotation).add(centerOfMass));
+        particle(particle, new Vector3d(max.x, min.y, min.z).rotate(rotation).add(centerOfMass));
+        particle(particle, new Vector3d(min.x, max.y, max.z).rotate(rotation).add(centerOfMass));
+        particle(particle, new Vector3d(max.x, min.y, max.z).rotate(rotation).add(centerOfMass));
+        particle(particle, new Vector3d(max.x, max.y, min.z).rotate(rotation).add(centerOfMass));
+        particle(particle, new Vector3d(min.x, min.y, min.z).rotate(rotation).add(centerOfMass));
+        particle(particle, new Vector3d(max.x, max.y, max.z).rotate(rotation).add(centerOfMass));
       }
 
       if (DEBUG_LEVEL == -1) {
         particleVector(centerOfMass, velocity, Particle.ELECTRIC_SPARK);
         //        particleVector(centerOfMass, angularVelocity, Particle.WATER_BUBBLE);
-        particleVector(centerOfMass, angularMomentum, Particle.WATER_BUBBLE);
+        particleVector(centerOfMass, angularVelocity, Particle.WATER_BUBBLE);
         particle(Particle.WAX_ON, centerOfMass);
       }
     }
-    if (particles.size() > 100) particles.clear();
 
     /* ACTIVE MEANS IT MOVES | UPDATE POSITION AND ROTATION */
     if (active) {
@@ -107,7 +121,9 @@ public abstract class PhysicsEntity {
       //      rotationMatrix.getNormalizedRotation(rotation);
 
       //      rotation.rotateXYZ(angularVelocity.x * DELTA_TIME, angularVelocity.y * DELTA_TIME, angularVelocity.z * DELTA_TIME);
-      rotation.rotateXYZ(angularMomentum.x * DELTA_TIME, angularMomentum.y * DELTA_TIME, angularMomentum.z * DELTA_TIME);
+//      Vector3d angularVelocity = new Vector3d(this.angularVelocity).mul(mesh.getInverseInertiaTensor().rotate(rotation, new Matrix3d())).mul(DELTA_TIME);
+//      rotation.rotateXYZ(angularVelocity.x, angularVelocity.y, angularVelocity.z);
+      rotation.rotateXYZ(angularVelocity.x * DELTA_TIME, angularVelocity.y * DELTA_TIME, angularVelocity.z * DELTA_TIME);
 
 
       velocity.add(0, -GRAVITY * DELTA_TIME, 0);
@@ -115,7 +131,7 @@ public abstract class PhysicsEntity {
     } else {
       velocity.set(0);
       //      angularVelocity.set(0);
-      angularMomentum.set(0);
+      angularVelocity.set(0);
     }
   }
 
@@ -180,18 +196,6 @@ public abstract class PhysicsEntity {
     return null;
   }
 
-  public record IntPair(int a, int b) {
-    @Override
-    public boolean equals(Object o) {
-      if (this == o) return true;
-      if (o == null || getClass() != o.getClass()) return false;
-
-      IntPair intPair = (IntPair) o;
-
-      if (a != intPair.a) return false;
-      return b == intPair.b;
-    }
-  }
 
   public CollisionData EPACollidesWith(Simplex simplex, PhysicsEntity otherEntity) {
     //    System.out.println("==================== CHECKING COLLISION ====================");
@@ -209,55 +213,55 @@ public abstract class PhysicsEntity {
      */
     Pair<ArrayList<Vector4d>, Integer> faceData = getFaceNormals(polytope, faces);
     ArrayList<Vector4d> normals = faceData.getA();
-    int closestFace = faceData.getB();
+    int minFace = faceData.getB();
 
     Vector3d minNormal = new Vector3d();
     double minDistance = Double.MAX_VALUE;
     int c = 0;
 
     while (minDistance == Double.MAX_VALUE && c < 50) {
-      //    while (minDistance == Double.MAX_VALUE && c < DEBUG_LEVEL) {
+//    while (minDistance == Double.MAX_VALUE && c < DEBUG_LEVEL) {
       c += 1;
       if (COLLISION_DEBUG_RENDERING) {
         for (Vector3d vector3d : polytope) {
           particle(Particle.FLAME, vector3d, new Vector3d(COLLISION_DEBUG_OFFSET));
         }
 
-        if (c == DEBUG_LEVEL)
+        if (c == DEBUG_LEVEL) {
           for (int j = 0; j < faces.size(); j += 3) {
             Vector3d a1 = polytope.get(faces.get(j));
             Vector3d b1 = polytope.get(faces.get(j + 1));
             Vector3d c1 = polytope.get(faces.get(j + 2));
 
             for (int i = 0; i < 10; i++) {
-              Vector3d particleLocation = new Vector3d(a1).sub(b1).mul(i / 10f, new Vector3d()).add(COLLISION_DEBUG_OFFSET).add(b1);
+              Vector3d particleLocation = new Vector3d(a1).sub(b1).mul(i / 10f).add(COLLISION_DEBUG_OFFSET).add(b1);
               WORLD.spawnParticle(Particle.REDSTONE, particleLocation.x, particleLocation.y, particleLocation.z, 0, 0, 0, 0, new Particle.DustOptions(Color.RED, 0.5f));
-            }
-            for (int i = 0; i < 10; i++) {
-              Vector3d particleLocation = new Vector3d(b1).sub(c1).mul(i / 10f, new Vector3d()).add(COLLISION_DEBUG_OFFSET).add(c1);
+
+              particleLocation = new Vector3d(b1).sub(c1).mul(i / 10f).add(COLLISION_DEBUG_OFFSET).add(c1);
               WORLD.spawnParticle(Particle.REDSTONE, particleLocation.x, particleLocation.y, particleLocation.z, 0, 0, 0, 0, new Particle.DustOptions(Color.RED, 0.5f));
-            }
-            for (int i = 0; i < 10; i++) {
-              Vector3d particleLocation = new Vector3d(c1).sub(a1).mul(i / 10f, new Vector3d()).add(COLLISION_DEBUG_OFFSET).add(a1);
+
+              particleLocation = new Vector3d(c1).sub(a1).mul(i / 10f).add(COLLISION_DEBUG_OFFSET).add(a1);
               WORLD.spawnParticle(Particle.REDSTONE, particleLocation.x, particleLocation.y, particleLocation.z, 0, 0, 0, 0, new Particle.DustOptions(Color.RED, 0.5f));
             }
 
             Vector3d mid = new Vector3d(a1).add(b1).add(c1).div(3).add(COLLISION_DEBUG_OFFSET);
             WORLD.spawnParticle(Particle.REDSTONE, mid.x, mid.y, mid.z, 0, 0, 0, 0, new Particle.DustOptions(Color.RED, 0.5f));
           }
+          return null;
+        }
       }
 
       //      PhysicsWorld.addDebugLine(Component.text("Faces: %s".formatted(faces)));
       //      System.out.println("\nc = " + c);
 
-      minNormal = new Vector3d(normals.get(closestFace).x, normals.get(closestFace).y, normals.get(closestFace).z);
-      minDistance = normals.get(closestFace).w;
+      minNormal = new Vector3d(normals.get(minFace).x, normals.get(minFace).y, normals.get(minFace).z);
+      minDistance = normals.get(minFace).w;
 
 
 //      System.out.println("minDistance = " + minDistance);
 
       Vector3d support = mesh.getMinkowskiDifferencePoint(otherEntity.mesh, minNormal, relativeRotation).add(centerOfMass).sub(otherEntity.centerOfMass);
-      double supportDistance = support.dot(minNormal);
+      double supportDistance = minNormal.dot(support);
 //      System.out.println("supportDistance = " + supportDistance);
 
       if (COLLISION_DEBUG_RENDERING) {
@@ -275,17 +279,37 @@ public abstract class PhysicsEntity {
         ArrayList<IntPair> uniqueEdges = new ArrayList<>();
 
         for (int i = 0; i < normals.size(); i++) {
-          if (Simplex.sameDirection(new Vector3d(normals.get(i).x, normals.get(i).y, normals.get(i).z), support)) {
+          if (new Vector3d(normals.get(i).x, normals.get(i).y, normals.get(i).z).dot(support) > new Vector3d(normals.get(i).x, normals.get(i).y, normals.get(i).z).dot(polytope.get(faces.get(i * 3)))) {
             //            System.out.println("is same direction");
             //            System.out.println(uniqueEdges);
+
+//            addUniqueEdge(uniqueEdges, faces, i * 3, i * 3 + 1);
+//            addUniqueEdge(uniqueEdges, faces, i * 3 + 1, i * 3 + 2);
+//            addUniqueEdge(uniqueEdges, faces, i * 3 + 2, i * 3);
+//
+//            //            System.out.println(uniqueEdges);
+//
+//            faces.remove(i * 3 + 2);
+//            faces.remove(i * 3 + 1);
+//            faces.remove(i * 3);
+//            normals.remove(i);
+//
+//            i -= 1;
+
+
             int face = i * 3;
 
             addUniqueEdge(uniqueEdges, faces, face + 0, face + 1);
             addUniqueEdge(uniqueEdges, faces, face + 1, face + 2);
             addUniqueEdge(uniqueEdges, faces, face + 2, face + 0);
 
-            //            System.out.println("faces = " + faces);
+//            faces.remove(i * 3 + 2);
+//            faces.remove(i * 3 + 1);
+//            faces.remove(i * 3);
+//            normals.remove(i);
 
+            //            System.out.println("faces = " + faces);
+            // This could probably be relaced with whats above, but this works and I'm not going to touch it
             faces.set(face + 2, faces.get(faces.size() - 1));
             faces.remove(faces.size() - 1);
             faces.set(face + 1, faces.get(faces.size() - 1));
@@ -309,30 +333,30 @@ public abstract class PhysicsEntity {
           newFaces.add(polytope.size());
         }
         polytope.add(support);
-        //        System.out.println("newFaces = " + newFaces.size() / 3);
-        //        System.out.println("polytope = " + polytope.size());
+//        System.out.println("newFaces = " + newFaces.size() / 3);
+//        System.out.println("polytope = " + polytope.size());
 
         Pair<ArrayList<Vector4d>, Integer> newFaceData = getFaceNormals(polytope, newFaces);
         ArrayList<Vector4d> newNormals = newFaceData.getA();
-        int newClosestFace = newFaceData.getB();
+        int newMinFace = newFaceData.getB();
 
-        //        System.out.println("newNormals = " + newNormals.size());
+//        System.out.println("newNormals = " + newNormals.size());
 
         double oldMinDistance = Double.MAX_VALUE;
         for (int i = 0; i < normals.size(); i++) {
           if (normals.get(i).w < oldMinDistance) {
             oldMinDistance = normals.get(i).w;
-            closestFace = i;
+            minFace = i;
           }
         }
 
-        //        System.out.println("oldMinDistance = " + oldMinDistance);
+//        System.out.println("oldMinDistance = " + oldMinDistance);
 
-        if (newNormals.get(newClosestFace).w < oldMinDistance) {
-          closestFace = newClosestFace + normals.size();
+        if (newNormals.get(newMinFace).w < oldMinDistance) {
+          minFace = newMinFace + normals.size();
         }
 
-        //        System.out.println("we got closest");
+//        System.out.println("we got closest");
 
         faces.addAll(newFaces);
         normals.addAll(newNormals);
@@ -346,18 +370,28 @@ public abstract class PhysicsEntity {
 
     // This is dumb
     // There has to be a better way
-    //    System.out.println("closestFace = " + closestFace);
-    //    System.out.println("faces = " + faces);
-    //    System.out.println("polytope = " + polytope);
-    Vector3d vertexA = polytope.get(faces.get(closestFace * 3));
-    Vector3d vertexB = polytope.get(faces.get(closestFace * 3 + 1));
-    Vector3d vertexC = polytope.get(faces.get(closestFace * 3 + 2));
+//    System.out.println("closestFace = " + minFace);
+//    System.out.println("faces = " + faces);
+//    System.out.println("polytope = " + polytope);
+    Vector3d vertexA = polytope.get(faces.get(minFace * 3));
+    Vector3d vertexB = polytope.get(faces.get(minFace * 3 + 1));
+    Vector3d vertexC = polytope.get(faces.get(minFace * 3 + 2));
+//    System.out.println("vertexA = " + vertexA);
+//    System.out.println("vertexB = " + vertexB);
+//    System.out.println("vertexC = " + vertexC);
+//    System.out.println("collisionNormal = " + collisionNormal);
+//    System.out.println("distanceInset = " + distanceInset);
     Vector3d barycentricCoefficients = barycentric(collisionNormal.mul(distanceInset, new Vector3d()), vertexA, vertexB, vertexC);
+//    System.out.println("barycentricCoefficients = " + barycentricCoefficients);
 
     Vector3d vertexThisA = mesh.getFurthestPoint(vertexA, null);
     Vector3d vertexThisB = mesh.getFurthestPoint(vertexB, null);
     Vector3d vertexThisC = mesh.getFurthestPoint(vertexC, null);
+//    System.out.println("vertexThisA = " + vertexThisA);
+//    System.out.println("vertexThisB = " + vertexThisB);
+//    System.out.println("vertexThisC = " + vertexThisC);
     Vector3d collisionPoint = new Vector3d(vertexThisA).mul(barycentricCoefficients.x).add(new Vector3d(vertexThisB).mul(barycentricCoefficients.y)).add(new Vector3d(vertexThisC).mul(barycentricCoefficients.z));
+//    System.out.println("collisionPoint = " + collisionPoint);
 
     collisionPoint.add(centerOfMass);
 
@@ -367,25 +401,21 @@ public abstract class PhysicsEntity {
       for (int i = 0; i < 10; i++) {
         Vector3d particleLocation = new Vector3d(collisionNormal.mul(distanceInset, new Vector3d())).mul(i / 10f).add(COLLISION_DEBUG_OFFSET);
         WORLD.spawnParticle(Particle.REDSTONE, particleLocation.x, particleLocation.y, particleLocation.z, 0, 0, 0, 0, new Particle.DustOptions(Color.SILVER, 0.25f));
-      }
 
-      for (int i = 0; i < 10; i++) {
-        Vector3d particleLocation = new Vector3d(vertexA).mul(i / 10f).add(COLLISION_DEBUG_OFFSET);
+        particleLocation = new Vector3d(vertexA).mul(i / 10f).add(COLLISION_DEBUG_OFFSET);
         WORLD.spawnParticle(Particle.REDSTONE, particleLocation.x, particleLocation.y, particleLocation.z, 0, 0, 0, 0, new Particle.DustOptions(Color.SILVER, 0.25f));
-      }
-      for (int i = 0; i < 10; i++) {
-        Vector3d particleLocation = new Vector3d(vertexB).mul(i / 10f).add(COLLISION_DEBUG_OFFSET);
+
+        particleLocation = new Vector3d(vertexB).mul(i / 10f).add(COLLISION_DEBUG_OFFSET);
         WORLD.spawnParticle(Particle.REDSTONE, particleLocation.x, particleLocation.y, particleLocation.z, 0, 0, 0, 0, new Particle.DustOptions(Color.SILVER, 0.25f));
-      }
-      for (int i = 0; i < 10; i++) {
-        Vector3d particleLocation = new Vector3d(vertexC).mul(i / 10f).add(COLLISION_DEBUG_OFFSET);
+
+        particleLocation = new Vector3d(vertexC).mul(i / 10f).add(COLLISION_DEBUG_OFFSET);
         WORLD.spawnParticle(Particle.REDSTONE, particleLocation.x, particleLocation.y, particleLocation.z, 0, 0, 0, 0, new Particle.DustOptions(Color.SILVER, 0.25f));
       }
       WORLD.spawnParticle(Particle.REDSTONE, collisionPoint.x, collisionPoint.y, collisionPoint.z, 0, 0, 0, 0, new Particle.DustOptions(Color.AQUA, 0.5f));
     }
 
     //    return null;
-    return new CollisionData(collisionPoint, collisionNormal, distanceInset);
+    return new CollisionData(collisionPoint, collisionNormal.normalize(), distanceInset);
   }
 
   Vector3d barycentric(Vector3d p, Vector3d a, Vector3d b, Vector3d c) {
@@ -412,13 +442,11 @@ public abstract class PhysicsEntity {
     IntPair reverse = new IntPair(faces.get(b), faces.get(a));
     //          System.out.println("Contains: " + uniqueEdges.contains(reverse) + " | " + reverse.a() + " | " + reverse.b());
 
-    for (IntPair uniqueEdge : uniqueEdges) {
-      if (uniqueEdge.equals(reverse)) {
-        uniqueEdges.remove(uniqueEdge);
-        return;
-      }
+    if (uniqueEdges.contains(reverse)) {
+      uniqueEdges.remove(reverse);
+    } else {
+      uniqueEdges.add(new IntPair(faces.get(a), faces.get(b)));
     }
-    uniqueEdges.add(new IntPair(faces.get(a), faces.get(b)));
   }
 
   Pair<ArrayList<Vector4d>, Integer> getFaceNormals(ArrayList<Vector3d> polytope, ArrayList<Integer> faces) {
@@ -453,21 +481,70 @@ public abstract class PhysicsEntity {
   }
 
   public void onCollision(PhysicsEntity otherEntity, CollisionData collisionData) {
-    particle(Particle.SOUL_FIRE_FLAME, collisionData.collisionPoint);
+    WORLD.spawnParticle(Particle.SOUL_FIRE_FLAME, collisionData.collisionPoint.x, collisionData.collisionPoint.y, collisionData.collisionPoint.z, 0, 0, 0, 0);
+
+    Vector3d rA = collisionData.collisionPoint.sub(centerOfMass, new Vector3d());
+    Vector3d rB = collisionData.collisionPoint.sub(otherEntity.centerOfMass, new Vector3d());
+
+    Vector3d angularVelocityA = new Vector3d(angularVelocity).mul(mesh.getInverseInertiaTensor());
+    Vector3d angularVelocityB = new Vector3d(otherEntity.angularVelocity).mul(otherEntity.mesh.getInverseInertiaTensor());
+    Vector3d velocityAtPointA = angularVelocityA.cross(rA, new Vector3d()).add(velocity);
+    Vector3d velocityAtPointB = angularVelocityB.cross(rB, new Vector3d()).add(otherEntity.velocity);
+    Vector3d relativeVelocity = velocityAtPointB.sub(velocityAtPointA, new Vector3d());
+
+    double velocityAlongNormal = relativeVelocity.dot(collisionData.normal);
+    if (velocityAlongNormal > 0) return;
+
+    Vector3d move = new Vector3d(collisionData.normal).mul(collisionData.distanceInset).div(mesh.getInverseMass() + otherEntity.mesh.getInverseMass());
+    if (active) centerOfMass.sub(move.mul(mesh.getInverseMass(), new Vector3d()));
+    if (otherEntity.active) otherEntity.centerOfMass.add(move.mul(otherEntity.mesh.getInverseMass(), new Vector3d()));
+
+    double impulse = -(1 + (elasticity + otherEntity.elasticity) / 2) * velocityAlongNormal / (mesh.getInverseMass() + otherEntity.mesh.getInverseMass());
+    Vector3d impulseVector = collisionData.normal.mul(impulse, new Vector3d());
+    Vector3d impulseVectorA = new Vector3d(impulseVector).mul(mesh.getInverseMass());
+    Vector3d impulseVectorB = new Vector3d(impulseVector).mul(otherEntity.mesh.getInverseMass());
+    if (active) velocity.sub(impulseVectorA);
+    if (otherEntity.active) otherEntity.velocity.add(impulseVectorB);
+
+    Vector3d torqueA = rA.cross(impulseVectorA, new Vector3d());
+    Vector3d torqueB = rB.cross(impulseVectorB, new Vector3d());
+    if (active) angularVelocity.sub(torqueA);
+    if (otherEntity.active) otherEntity.angularVelocity.add(torqueB);
+
+
+    particleVector(Color.RED, centerOfMass, rA);
+    particleVector(Color.MAROON, otherEntity.centerOfMass, rB);
+    particleVector(Color.BLUE, collisionData.collisionPoint, collisionData.normal);
+    particleVector(Color.YELLOW, collisionData.collisionPoint, relativeVelocity);
+    particleVector(Color.GREEN, collisionData.collisionPoint.add(0.2, 0, 0), torqueA);
+    particleVector(Color.GREEN, collisionData.collisionPoint.add(0.2, 0, 0), torqueB);
+    particleVector(Color.ORANGE, collisionData.collisionPoint.add(0.2, 0, 0), impulseVectorA);
+    particleVector(Color.ORANGE, collisionData.collisionPoint.add(0.2, 0, 0), impulseVectorB);
+
+//    Vector3d velocityAtPointB = otherEntity.velocity.add(otherEntity.angularMomentum.cross(rB, new Vector3d()), new Vector3d());
+//    System.out.println("relativeVelocity = " + relativeVelocity);
+//    System.out.println("velocityAlongNormal = " + velocityAlongNormal);
+
+//    L = Iω = r × p
+//    p=mv
+//    Known: r, I, L
+//    Find: v
+//    L = rmv
+//    L/rm = v
+
+//
+
 //    System.out.println(this.hashCode() + " | " + otherEntity.hashCode());
 //    System.out.println("collisionData = " + collisionData);
 //        Position Resolution
 //    System.out.println("centerOfMass = " + centerOfMass);
 //    System.out.println("otherEntity.centerOfMass = " + otherEntity.centerOfMass);
-    Vector3d move = new Vector3d(collisionData.normal).mul(collisionData.distanceInset).div(mesh.getInverseMass() + otherEntity.mesh.getInverseMass());
 //    System.out.println("inset = " + new Vector3d(collisionData.normal).mul(collisionData.distanceInset));
 //    System.out.println("Inverse Mass = " + mesh.getInverseMass() + " | " + otherEntity.mesh.getInverseMass());
 //    System.out.println("Added = " + (mesh.getInverseMass() + otherEntity.mesh.getInverseMass()));
 //    System.out.println("move = " + move);
 //    if (true) return;
-    if (active) centerOfMass.sub(move.mul(mesh.getInverseMass(), new Vector3d()));
 //    System.out.println("centerOfMass = " + centerOfMass);
-    if (otherEntity.active) otherEntity.centerOfMass.add(move.mul(otherEntity.mesh.getInverseMass()));
 //    System.out.println("otherEntity.centerOfMass = " + otherEntity.centerOfMass);
 
     //    //      Calculate momentum
@@ -487,75 +564,69 @@ public abstract class PhysicsEntity {
     //      otherEntity.velocity.set(otherFinalVelocity.add(velocity.negate()));
     //    }
 
-    Vector3d relativeVelocity = otherEntity.velocity.sub(velocity, new Vector3d());
-    double velocityAlongNormal = relativeVelocity.dot(collisionData.normal);
-
-    if (velocityAlongNormal > 0) return;
 
     //    The bounciness / how much energy is conserved
     //    The impulse made of the velocity along the normal and the mass
-    double impulse = -(1 + (elasticity + otherEntity.elasticity) / 2) * velocityAlongNormal / (mesh.getInverseMass() + otherEntity.mesh.getInverseMass());
 //    System.out.println("impulse = " + impulse);
-    Vector3d impulseVector = collisionData.normal.mul(impulse, new Vector3d());
 //    System.out.println("impulseVector = " + impulseVector);
-    if (active) velocity.sub(impulseVector.mul(mesh.getInverseMass(), new Vector3d()));
 //    System.out.println("velocity = " + velocity);
-    if (otherEntity.active) otherEntity.velocity.add(impulseVector.mul(otherEntity.mesh.getInverseMass()));
 //    System.out.println("otherEntity.velocity = " + otherEntity.velocity);
 
-    //    Rotational Resolution
-    Vector3d rA = collisionData.collisionPoint.sub(centerOfMass, new Vector3d());
-//    System.out.println("rA = " + rA);
-    Vector3d rB = collisionData.collisionPoint.sub(otherEntity.centerOfMass, new Vector3d());
+    //    Rotational Torque
+//    w'a = wa + J-1(r x jn)
+//    w'b = wb - J-1(r x jn)
 //    System.out.println("rB = " + rB);
-    Vector3d torqueA = rA.cross(impulseVector, new Vector3d());
 //    System.out.println("torqueA = " + torqueA);
-    Vector3d torqueB = rB.cross(impulseVector, new Vector3d());
-    particleVector(collisionData.collisionPoint, torqueA, Particle.FLAME);
-    particleVector(collisionData.collisionPoint, torqueB, Particle.FLAME);
+//    Vector3d torqueA = rA.cross(impulseVectorA, new Vector3d());
+//    Vector3d torqueB = rB.cross(impulseVectorB, new Vector3d());
+//    particleVector(collisionData.collisionPoint, torqueA, Particle.FLAME);
+//    particleVector(collisionData.collisionPoint, torqueB, Particle.FLAME);
 //    System.out.println("torqueB = " + torqueB);
-    if (active) angularMomentum.sub(torqueA.mul(mesh.getInverseInertiaTensor()));
+//    if (active) angularMomentum.sub(torqueA);
+
     //    if (active) angularVelocity.add(new Vector3d(torqueA).mul(mesh.getInverseInertiaTensor()).mul(DELTA_TIME));
 //    System.out.println("angularMomentum = " + angularMomentum);
-    if (otherEntity.active) otherEntity.angularMomentum.add(torqueB.mul(mesh.getInverseInertiaTensor()));
+//    if (otherEntity.active) otherEntity.angularMomentum.add(torqueB);
+
     //      otherEntity.angularVelocity.sub(new Vector3d(torqueB).mul(otherEntity.mesh.getInverseInertiaTensor()).mul(DELTA_TIME));
 //    System.out.println("otherEntity.angularMomentum = " + otherEntity.angularMomentum);
 
-    // Friction stuff
-    relativeVelocity = otherEntity.velocity.sub(velocity, new Vector3d());
-//    System.out.println("relativeVelocity = " + relativeVelocity);
-    velocityAlongNormal = relativeVelocity.dot(collisionData.normal);
-//    System.out.println("velocityAlongNormal = " + velocityAlongNormal);
 
-//    System.out.println("collisionData.normal = " + collisionData.normal);
-    Vector3d tangent = relativeVelocity.sub(collisionData.normal.mul(velocityAlongNormal, new Vector3d()), new Vector3d());
-    if (tangent.lengthSquared() > 0.0001)
-      tangent.normalize();
-//    System.out.println("tangent = " + tangent);
-    double velocityAlongTangent = relativeVelocity.dot(tangent);
-//    System.out.println("velocityAlongTangent = " + velocityAlongTangent);
-
-    double mu = new Vector2d(staticFriction, otherEntity.staticFriction).length();
-//    System.out.println("dynamicFriction = " + dynamicFriction);
-    double frictionImpulse = -velocityAlongTangent / (mesh.getInverseMass() + otherEntity.mesh.getInverseMass());
-//    System.out.println("frictionImpulse = " + frictionImpulse);
-
-    Vector3d frictionImpulseVector;
-    if (Math.abs(frictionImpulse) < impulse * mu) {
-      frictionImpulseVector = new Vector3d(tangent).mul(frictionImpulse);
-//      System.out.println("1 frictionImpulseVector = " + frictionImpulseVector);
-    } else {
-      mu = new Vector2d(dynamicFriction, otherEntity.dynamicFriction).length();
-      frictionImpulseVector = new Vector3d(tangent).mul(-impulse * mu);
-//      System.out.println("2 frictionImpulseVector = " + frictionImpulseVector);
-    }
-
-    if (active)
-      velocity.sub(frictionImpulseVector.mul(mesh.getInverseMass(), new Vector3d()).mul(DELTA_TIME));
-//    System.out.println("velocity = " + velocity);
-    if (otherEntity.active)
-      otherEntity.velocity.add(frictionImpulseVector.mul(otherEntity.mesh.getInverseMass()).mul(DELTA_TIME));
-//    System.out.println("otherEntity.velocity = " + otherEntity.velocity);
+//    // Friction stuff
+//    relativeVelocity = otherEntity.velocity.sub(velocity, new Vector3d());
+//    velocityAlongNormal = relativeVelocity.dot(collisionData.normal);
+////    System.out.println("velocityAlongNormal = " + velocityAlongNormal);
+//
+////    System.out.println("collisionData.normal = " + collisionData.normal);
+//    Vector3d tangent = relativeVelocity.sub(collisionData.normal.mul(velocityAlongNormal, new Vector3d()), new Vector3d());
+//    if (tangent.lengthSquared() > 0.0001)
+//      tangent.normalize();
+////    System.out.println("tangent = " + tangent);
+//    double velocityAlongTangent = relativeVelocity.dot(tangent);
+////    System.out.println("velocityAlongTangent = " + velocityAlongTangent);
+//
+//    double mu = new Vector2d(staticFriction, otherEntity.staticFriction).length();
+////    System.out.println("dynamicFriction = " + dynamicFriction);
+//    double frictionImpulse = -velocityAlongTangent / (mesh.getInverseMass() + otherEntity.mesh.getInverseMass());
+////    System.out.println("frictionImpulse = " + frictionImpulse);
+//
+//    Vector3d frictionImpulseVector;
+//    if (Math.abs(frictionImpulse) < impulse * mu) {
+//      frictionImpulseVector = new Vector3d(tangent).mul(frictionImpulse);
+////      System.out.println("1 frictionImpulseVector = " + frictionImpulseVector);
+//    } else {
+//      mu = new Vector2d(dynamicFriction, otherEntity.dynamicFriction).length();
+//      frictionImpulseVector = new Vector3d(tangent).mul(-impulse * mu);
+////      System.out.println("2 frictionImpulseVector = " + frictionImpulseVector);
+//    }
+//
+//    if (active)
+//      velocity.sub(frictionImpulseVector.mul(mesh.getInverseMass(), new Vector3d()).mul(DELTA_TIME));
+////    System.out.println("velocity = " + velocity);
+//    if (otherEntity.active)
+//      otherEntity.velocity.add(frictionImpulseVector.mul(otherEntity.mesh.getInverseMass()).mul(DELTA_TIME));
+////    System.out.println("otherEntity.velocity = " + otherEntity.velocity);
+//    STOP_NOW = true;
   }
 
   public void applyForce(Vector3d force) {
@@ -587,6 +658,13 @@ public abstract class PhysicsEntity {
     particleVector(location, vector, Particle.FLAME);
   }
 
+  public void particleVector(Color color, Vector3d location, Vector3d vector) {
+    for (int i = 0; i < 10; i++) {
+      Vector3d particleLocation = new Vector3d(location).add(new Vector3d(vector).mul(i / 10f));
+      particle(color, particleLocation);
+    }
+  }
+
   public void particle(Particle particle, Vector3d location) {
     particle(particle, location, new Vector3d());
   }
@@ -598,17 +676,24 @@ public abstract class PhysicsEntity {
 
   public void particle(Color color, Vector3d location, Vector3d offset) {
     Vector3d particleLocation = new Vector3d(location).add(offset);
-    WORLD.spawnParticle(Particle.REDSTONE, particleLocation.x, particleLocation.y, particleLocation.z, 0, 0, 0, 0, new Particle.DustOptions(color, 0.25f));
+    particles.add(new ColorParticleData(color, particleLocation));
+//    WORLD.spawnParticle(Particle.REDSTONE, particleLocation.x, particleLocation.y, particleLocation.z, 0, 0, 0, 0, new Particle.DustOptions(color, 0.25f));
   }
 
   public void particle(Color color, Vector3d location) {
-    WORLD.spawnParticle(Particle.REDSTONE, location.x, location.y, location.z, 0, 0, 0, 0, new Particle.DustOptions(color, 0.25f));
+//    WORLD.spawnParticle(Particle.REDSTONE, location.x, location.y, location.z, 0, 0, 0, 0, new Particle.DustOptions(color, 0.25f));
+    particles.add(new ColorParticleData(color, location));
   }
 
   public void showParticles() {
     for (ParticleData particleData : particles) {
-      WORLD.spawnParticle(particleData.particle, particleData.location.x, particleData.location.y, particleData.location.z, 0, 0, 0, 0);
+      particleData.spawn(WORLD);
+//      WORLD.spawnParticle(particleData.particle, particleData.location.x, particleData.location.y, particleData.location.z, 0, 0, 0, 0);
     }
+  }
+
+  public void clearParticles() {
+    particles.clear();
   }
 
   public static BlockDisplay createBlockDisplay(Location location, BlockData blockData) {

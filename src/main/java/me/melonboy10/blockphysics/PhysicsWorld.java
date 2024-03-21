@@ -12,8 +12,8 @@ import java.util.Iterator;
 public class PhysicsWorld {
   public static float GRAVITY = 9.8f;
   public static final float ELASTICITY = 0.8f;
-  public static final int STEPS_PER_SECOND = 60;
-  //  public static final int STEPS_PER_SECOND = 1;
+  //  public static final int STEPS_PER_SECOND = 60;
+  public static final int STEPS_PER_SECOND = 1;
   public static float DELTA_TIME = 1 / (20f * STEPS_PER_SECOND);
 
   public static World WORLD;
@@ -35,12 +35,19 @@ public class PhysicsWorld {
     entities.add(entity);
   }
 
-  public static void update() {
-    for (PhysicsEntity entity : entities) {
-      entity.showParticles();
-    }
+  public static void showParticles() {
+    if (DEBUG)
+      for (PhysicsEntity entity : entities) {
+        entity.showParticles();
+      }
+  }
 
+  public static void update() {
     if (STOP_NOW) return;
+
+    for (PhysicsEntity entity : entities) {
+      entity.clearParticles();
+    }
 
     debugLines.add(Component.text("Entities: %d".formatted(entities.size())));
     debugLines.add(Component.text("Delta Time: %f".formatted(DELTA_TIME)));
@@ -48,6 +55,7 @@ public class PhysicsWorld {
 
     long startTimeTick = System.nanoTime();
     for (int t = 0; t < STEPS_PER_SECOND; t++) {
+      if (STOP_NOW) return;
       long startTime = System.nanoTime();
       for (Iterator<PhysicsEntity> iterator = entities.iterator(); iterator.hasNext(); ) {
         PhysicsEntity entity = iterator.next();

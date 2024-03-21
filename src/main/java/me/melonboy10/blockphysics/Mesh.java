@@ -6,6 +6,8 @@ import org.joml.Matrix3d;
 import org.joml.Quaterniond;
 import org.joml.Vector3d;
 
+import java.util.Collection;
+
 public class Mesh {
   private @Getter BoundingBox[] regions;
   private @Getter Vector3d[] vertices;
@@ -27,11 +29,24 @@ public class Mesh {
     recenter();
   }
 
+  public void setRegions(Collection<BoundingBox> boundingBoxes) {
+    regions = new BoundingBox[boundingBoxes.size()];
+    int i = 0;
+    for (BoundingBox boundingBox : boundingBoxes) {
+      System.out.println("Set Region " + boundingBox);
+      regions[i++] = boundingBox.clone();
+    }
+
+    recenter();
+  }
+
   private void recenter() {
     calculateVolume();
     Vector3d centerOfMass = getCenterOfMass();
+    System.out.println("centerOfMass " + centerOfMass);
     for (BoundingBox region : regions) {
-      region.shift(centerOfMass.x, centerOfMass.y, centerOfMass.z);
+      region.shift(-centerOfMass.x, -centerOfMass.y, -centerOfMass.z);
+      System.out.println("Shifted Region " + region);
     }
     calculateInverseInertiaTensor();
     calculateVertices();
@@ -65,8 +80,8 @@ public class Mesh {
   private Vector3d getCenterOfMass() {
     Vector3d centerOfMass = new Vector3d();
     for (BoundingBox region : regions) {
-      Vector3d size = new Vector3d((float) region.getMaxX() - (float) region.getMinX(), (float) region.getMaxY() - (float) region.getMinY(), (float) region.getMaxZ() - (float) region.getMinZ());
-      centerOfMass.add(size.mul((float) region.getMaxX() + (float) region.getMinX(), (float) region.getMaxY() + (float) region.getMinY(), (float) region.getMaxZ() + (float) region.getMinZ()));
+      Vector3d regionCenter = region.getCenter().toVector3d();
+      centerOfMass.add(regionCenter.mul(region.getVolume()));
     }
     return centerOfMass.div(volume);
   }
