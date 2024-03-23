@@ -20,7 +20,6 @@ import org.bukkit.scheduler.BukkitRunnable;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.checkerframework.framework.qual.DefaultQualifier;
-import org.joml.Quaterniond;
 import org.joml.Vector3d;
 
 import static me.melonboy10.blockphysics.PhysicsWorld.*;
@@ -177,22 +176,35 @@ public final class BlockPhysicsPlugin extends JavaPlugin implements Listener {
                         })))
       .then(new LiteralArgument("test")
               .executesPlayer((player, args) -> {
-//                DEBUG_LEVEL = 2;
-                DEBUG = false;
-//                GRAVITY = 0;
+                DEBUG_LEVEL = 2;
+                DEBUG = true;
+                GRAVITY = 0;
 
-                for (int i = 0; i < 10; i++) {
-                  for (int j = 0; j < 10; j++) {
-                    int finalI = i;
-                    int finalJ = j;
-                    addEntity(new PhysicsBlock(player.getLocation().add(finalI * 1.3, (double) (i + j) / 5, finalJ * 1.3), Material.STONE.createBlockData()) {{
-                      rotation = new Quaterniond().rotateXYZ(finalI * Math.PI / 10, finalJ * Math.PI / 10, 0);
-                    }});
-                    addEntity(new PhysicsBlock(player.getLocation().add(15 + finalI * 1.3, (double) (i + j) / 5, finalJ * 1.3), Material.STONE.createBlockData()) {{
-                      angularVelocity = new Vector3d(0, 0, 1).rotate(new Quaterniond().rotateXYZ(finalI * Math.PI / 10, finalJ * Math.PI / 10, 0));
-                    }});
-                  }
-                }
+                addEntity(new PhysicsBlock(player.getLocation().add(0, 0, 0), Material.COBBLESTONE_WALL.createBlockData()) {{
+                  angularVelocity = new Vector3d(1, 0, 0);
+//                  angularMomentum = new Vector3d(1, 0, 0);
+                }});
+                addEntity(new PhysicsBlock(player.getLocation().add(2, 0, 0), Material.MOSSY_COBBLESTONE_WALL.createBlockData()) {{
+                  angularVelocity = new Vector3d(0, 1, 0);
+//                  angularMomentum = new Vector3d(0, 1, 0);
+                }});
+                addEntity(new PhysicsBlock(player.getLocation().add(4, 0, 0), Material.STONE_BRICK_WALL.createBlockData()) {{
+                  angularVelocity = new Vector3d(0, 0, 1);
+//                  angularMomentum = new Vector3d(0, 0, 1);
+                }});
+
+//                for (int i = 0; i < 10; i++) {
+//                  for (int j = 0; j < 10; j++) {
+//                    int finalI = i;
+//                    int finalJ = j;
+//                    addEntity(new PhysicsBlock(player.getLocation().add(finalI * 1.3, (double) (i + j) / 5, finalJ * 1.3), Material.STONE.createBlockData()) {{
+//                      rotation = new Quaterniond().rotateXYZ(finalI * Math.PI / 10, finalJ * Math.PI / 10, 0);
+//                    }});
+//                    addEntity(new PhysicsBlock(player.getLocation().add(15 + finalI * 1.3, (double) (i + j) / 5, finalJ * 1.3), Material.STONE.createBlockData()) {{
+//                      angularVelocity = new Vector3d(0, 0, 1).rotate(new Quaterniond().rotateXYZ(finalI * Math.PI / 10, finalJ * Math.PI / 10, 0));
+//                    }});
+//                  }
+//                }
 
 
 //                addEntity(new PhysicsBlock(player.getLocation().add(1, 1, 0), Material.COBWEB.createBlockData()) {{

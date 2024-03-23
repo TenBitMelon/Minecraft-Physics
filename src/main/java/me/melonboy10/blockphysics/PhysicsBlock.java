@@ -7,6 +7,7 @@ import org.bukkit.entity.Interaction;
 import org.bukkit.entity.TextDisplay;
 import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Transformation;
+import org.joml.Matrix3d;
 import org.joml.Vector3d;
 
 import java.util.Collection;
@@ -62,7 +63,9 @@ public class PhysicsBlock extends PhysicsEntity implements InteractiveEntity {
         Position: %s
         Velocity: %s
         Angular Momentum: %s
-        """.formatted(centerOfMass, velocity, angularVelocity));
+        Angular Velocity: %s
+        """.formatted(centerOfMass, velocity, angularVelocity, new Vector3d(this.angularVelocity).mul(mesh.getInverseInertiaTensor().rotate(rotation, new Matrix3d()))));
+//        """.formatted(centerOfMass, velocity, angularMomentum, new Vector3d(this.angularMomentum).mul(mesh.getInverseInertiaTensor().rotate(rotation, new Matrix3d()))));
     else debugDisplay.setText("");
   }
 

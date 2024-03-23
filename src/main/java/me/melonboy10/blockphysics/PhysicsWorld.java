@@ -12,8 +12,8 @@ import java.util.Iterator;
 public class PhysicsWorld {
   public static float GRAVITY = 9.8f;
   public static final float ELASTICITY = 0.8f;
-  //  public static final int STEPS_PER_SECOND = 60;
-  public static final int STEPS_PER_SECOND = 1;
+  public static final int STEPS_PER_SECOND = 60;
+  //  public static final int STEPS_PER_SECOND = 1;
   public static float DELTA_TIME = 1 / (20f * STEPS_PER_SECOND);
 
   public static World WORLD;

@@ -33,7 +33,6 @@ public class Mesh {
     regions = new BoundingBox[boundingBoxes.size()];
     int i = 0;
     for (BoundingBox boundingBox : boundingBoxes) {
-      System.out.println("Set Region " + boundingBox);
       regions[i++] = boundingBox.clone();
     }
 
@@ -43,10 +42,8 @@ public class Mesh {
   private void recenter() {
     calculateVolume();
     Vector3d centerOfMass = getCenterOfMass();
-    System.out.println("centerOfMass " + centerOfMass);
     for (BoundingBox region : regions) {
       region.shift(-centerOfMass.x, -centerOfMass.y, -centerOfMass.z);
-      System.out.println("Shifted Region " + region);
     }
     calculateInverseInertiaTensor();
     calculateVertices();

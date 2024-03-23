@@ -26,13 +26,12 @@ public abstract class PhysicsEntity {
   Mesh mesh;
   Vector3d centerOfMass;
   Vector3d velocity;
-  //  Vector3d angularVelocity;
   Vector3d angularVelocity;
+  //  Vector3d angularMomentum;
   Quaterniond rotation;
-  double elasticity = 0.8;
+  double elasticity = 0.4;
   double staticFriction = 0.4;
   double dynamicFriction = 0.5;
-  //  Vector3d angularVelocity = new Vector3d();
 
   public static class ParticleData {
     protected final Particle particle;
@@ -68,8 +67,8 @@ public abstract class PhysicsEntity {
     this.mesh = mesh;
     this.centerOfMass = position.toVector().toVector3d();
     this.velocity = new Vector3d();
-    this.angularVelocity = new Vector3d(0, 0, 0);
-    //    this.angularVelocity = new Vector3d();
+//    this.angularMomentum = new Vector3d(0, 0, 0);
+    this.angularVelocity = new Vector3d();
     this.rotation = new Quaterniond();
   }
 
@@ -97,8 +96,8 @@ public abstract class PhysicsEntity {
 
       if (DEBUG_LEVEL == -1) {
         particleVector(centerOfMass, velocity, Particle.ELECTRIC_SPARK);
-        //        particleVector(centerOfMass, angularVelocity, Particle.WATER_BUBBLE);
         particleVector(centerOfMass, angularVelocity, Particle.WATER_BUBBLE);
+//        particleVector(centerOfMass, angularMomentum, Particle.WATER_BUBBLE);
         particle(Particle.WAX_ON, centerOfMass);
       }
     }
@@ -121,17 +120,18 @@ public abstract class PhysicsEntity {
       //      rotationMatrix.getNormalizedRotation(rotation);
 
       //      rotation.rotateXYZ(angularVelocity.x * DELTA_TIME, angularVelocity.y * DELTA_TIME, angularVelocity.z * DELTA_TIME);
-//      Vector3d angularVelocity = new Vector3d(this.angularVelocity).mul(mesh.getInverseInertiaTensor().rotate(rotation, new Matrix3d())).mul(DELTA_TIME);
-//      rotation.rotateXYZ(angularVelocity.x, angularVelocity.y, angularVelocity.z);
-      rotation.rotateXYZ(angularVelocity.x * DELTA_TIME, angularVelocity.y * DELTA_TIME, angularVelocity.z * DELTA_TIME);
+//      Vector3d angularVelocity = new Vector3d(this.angularMomentum).mul(mesh.getInverseInertiaTensor().rotate(rotation, new Matrix3d()));
+
+      Quaterniond deltaRotation = new Quaterniond(angularVelocity.x * DELTA_TIME, angularVelocity.y * DELTA_TIME, angularVelocity.z * DELTA_TIME, 0).mul(rotation).mul(0.5);
+      rotation.add(deltaRotation);
 
 
       velocity.add(0, -GRAVITY * DELTA_TIME, 0);
 
     } else {
       velocity.set(0);
-      //      angularVelocity.set(0);
       angularVelocity.set(0);
+//      angularMomentum.set(0);
     }
   }
 
@@ -486,8 +486,10 @@ public abstract class PhysicsEntity {
     Vector3d rA = collisionData.collisionPoint.sub(centerOfMass, new Vector3d());
     Vector3d rB = collisionData.collisionPoint.sub(otherEntity.centerOfMass, new Vector3d());
 
-    Vector3d angularVelocityA = new Vector3d(angularVelocity).mul(mesh.getInverseInertiaTensor());
-    Vector3d angularVelocityB = new Vector3d(otherEntity.angularVelocity).mul(otherEntity.mesh.getInverseInertiaTensor());
+//    Vector3d angularVelocityA = new Vector3d(angularMomentum).mul(mesh.getInverseInertiaTensor());
+//    Vector3d angularVelocityB = new Vector3d(otherEntity.angularMomentum).mul(otherEntity.mesh.getInverseInertiaTensor());
+    Vector3d angularVelocityA = new Vector3d(angularVelocity);
+    Vector3d angularVelocityB = new Vector3d(otherEntity.angularVelocity);
     Vector3d velocityAtPointA = angularVelocityA.cross(rA, new Vector3d()).add(velocity);
     Vector3d velocityAtPointB = angularVelocityB.cross(rB, new Vector3d()).add(otherEntity.velocity);
     Vector3d relativeVelocity = velocityAtPointB.sub(velocityAtPointA, new Vector3d());
@@ -506,11 +508,30 @@ public abstract class PhysicsEntity {
     if (active) velocity.sub(impulseVectorA);
     if (otherEntity.active) otherEntity.velocity.add(impulseVectorB);
 
-    Vector3d torqueA = rA.cross(impulseVectorA, new Vector3d());
-    Vector3d torqueB = rB.cross(impulseVectorB, new Vector3d());
+    Vector3d torqueA = rA.cross(impulseVectorA, new Vector3d()).mul(mesh.getInverseInertiaTensor());
+    Vector3d torqueB = rB.cross(impulseVectorB, new Vector3d()).mul(otherEntity.mesh.getInverseInertiaTensor());
     if (active) angularVelocity.sub(torqueA);
     if (otherEntity.active) otherEntity.angularVelocity.add(torqueB);
+//    Vector3d torqueA = rA.cross(impulseVectorA, new Vector3d());
+//    Vector3d torqueB = rB.cross(impulseVectorB, new Vector3d());
+//    if (active) angularMomentum.sub(torqueA);
+//    if (otherEntity.active) otherEntity.angularMomentum.add(torqueB);
 
+    Vector3d tangent = relativeVelocity.sub(collisionData.normal.mul(velocityAlongNormal, new Vector3d()), new Vector3d());
+    if (tangent.lengthSquared() > 0) {
+      tangent.normalize();
+      double impulseMagnitude = -relativeVelocity.dot(tangent) / (mesh.getInverseMass() + otherEntity.mesh.getInverseMass());
+      Vector3d impulseVectorTangent = new Vector3d(tangent).mul(impulseMagnitude);
+      Vector3d impulseVectorATangent = new Vector3d(impulseVectorTangent).mul(mesh.getInverseMass());
+      Vector3d impulseVectorBTangent = new Vector3d(impulseVectorTangent).mul(otherEntity.mesh.getInverseMass());
+      if (active) velocity.sub(impulseVectorATangent);
+      if (otherEntity.active) otherEntity.velocity.add(impulseVectorBTangent);
+
+      Vector3d frictionTorqueA = rA.cross(impulseVectorATangent, new Vector3d()).mul(mesh.getInverseInertiaTensor());
+      Vector3d frictionTorqueB = rB.cross(impulseVectorBTangent, new Vector3d()).mul(otherEntity.mesh.getInverseInertiaTensor());
+      if (active) angularVelocity.sub(frictionTorqueA);
+      if (otherEntity.active) otherEntity.angularVelocity.add(frictionTorqueB);
+    }
 
     particleVector(Color.RED, centerOfMass, rA);
     particleVector(Color.MAROON, otherEntity.centerOfMass, rB);
