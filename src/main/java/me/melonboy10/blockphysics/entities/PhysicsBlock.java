@@ -1,5 +1,8 @@
-package me.melonboy10.blockphysics;
+package me.melonboy10.blockphysics.entities;
 
+import lombok.Getter;
+import me.melonboy10.blockphysics.core.PhysicsEntity;
+import me.melonboy10.blockphysics.core.PhysicsWorld;
 import org.bukkit.Location;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.BlockDisplay;
@@ -12,9 +15,12 @@ import org.joml.Vector3d;
 
 import java.util.Collection;
 
-public class PhysicsBlock extends PhysicsEntity implements InteractiveEntity {
+import static me.melonboy10.blockphysics.core.PhysicsWorld.*;
+
+public class PhysicsBlock extends PhysicsEntity {
   BlockDisplay blockDisplay;
   TextDisplay debugDisplay;
+  @Getter
   Interaction interaction;
 
   public PhysicsBlock(Location position, BlockData blockData) {
@@ -77,8 +83,4 @@ public class PhysicsBlock extends PhysicsEntity implements InteractiveEntity {
     debugDisplay.remove();
   }
 
-  @Override
-  public Interaction getInteraction() {
-    return interaction;
-  }
 }

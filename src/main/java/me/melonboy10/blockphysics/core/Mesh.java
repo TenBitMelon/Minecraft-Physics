@@ -1,4 +1,4 @@
-package me.melonboy10.blockphysics;
+package me.melonboy10.blockphysics.core;
 
 import lombok.Getter;
 import org.bukkit.util.BoundingBox;

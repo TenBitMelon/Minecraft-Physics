@@ -2,6 +2,12 @@ package me.melonboy10.blockphysics;
 
 import dev.jorel.commandapi.CommandTree;
 import dev.jorel.commandapi.arguments.*;
+import me.melonboy10.blockphysics.core.PhysicsEntity;
+import me.melonboy10.blockphysics.core.PhysicsWorld;
+import me.melonboy10.blockphysics.debugger.Debugger;
+import me.melonboy10.blockphysics.entities.BlockGroup;
+import me.melonboy10.blockphysics.entities.FloorPlane;
+import me.melonboy10.blockphysics.entities.PhysicsBlock;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -9,6 +15,7 @@ import org.bukkit.Particle;
 import org.bukkit.block.Block;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.Interaction;
+import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
@@ -22,7 +29,10 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 import org.checkerframework.framework.qual.DefaultQualifier;
 import org.joml.Vector3d;
 
-import static me.melonboy10.blockphysics.PhysicsWorld.*;
+import java.util.ArrayList;
+
+import static me.melonboy10.blockphysics.core.PhysicsWorld.*;
+
 
 @DefaultQualifier(NonNull.class)
 public final class BlockPhysicsPlugin extends JavaPlugin implements Listener {
@@ -31,21 +41,11 @@ public final class BlockPhysicsPlugin extends JavaPlugin implements Listener {
 
   @Override
   public void onEnable() {
+
     PLUGIN = this;
-    new PhysicsWorld();
     this.getServer().getPluginManager().registerEvents(this, this);
-
-//    Add a boss bar before publishing that says iot is not good and shouldn't be used as a replacement for Aeronatics
-
-    System.out.println(Bukkit.getWorlds().get(0));
-
-    //    if (Bukkit.getOnlinePlayers().size() > 0) {
-    //      //      world.addEntity(new FloorPlane(Bukkit.getPlayer("melonboy10").getLocation(), 0.5f,
-    //      // 25));
-    //      //      Bukkit.getOnlinePlayers().forEach(player -> world.addEntity(new
-    //      // PhysicsPlayer(player)));
-    //      Bukkit.getOnlinePlayers().forEach(player -> world.addEntity(new PhysicsBlock(player.getLocation(), Material.GLASS.createBlockData(), false)));
-    //    }
+    this.getServer().getPluginManager().registerEvents(Debugger.DebugListener.INSTANCE, this);
+    //    Add a boss bar before publishing that says iot is not good and shouldn't be used as a replacement for Aeronatics
 
     new CommandTree("physics")
       .executesPlayer((player, args) -> {
@@ -168,12 +168,11 @@ public final class BlockPhysicsPlugin extends JavaPlugin implements Listener {
                                 }
                               }))))
       .then(new LiteralArgument("floor")
-              .executesPlayer((player, args) -> {
-                addEntity(new FloorPlane(player.getLocation(), 10));
-              }).then(new IntegerArgument("scale")
-                        .executesPlayer((player, args) -> {
-                          addEntity(new FloorPlane(player.getLocation(), (int) args.get("scale")));
-                        })))
+              .then(new IntegerArgument("scale").setOptional(true)
+                      .executesPlayer((player, args) -> {
+                        addEntity(new FloorPlane(player.getLocation().add(0, -2, 0), (int) args.getOrDefault("scale", 10)));
+                        Debugger.organizeElementsAround(player.getLocation().toVector().toVector3d().add(0, 1, 0));
+                      })))
       .then(new LiteralArgument("test")
               .executesPlayer((player, args) -> {
                 DEBUG_LEVEL = 2;
@@ -182,64 +181,64 @@ public final class BlockPhysicsPlugin extends JavaPlugin implements Listener {
 
                 addEntity(new PhysicsBlock(player.getLocation().add(0, 0, 0), Material.COBBLESTONE_WALL.createBlockData()) {{
                   angularVelocity = new Vector3d(1, 0, 0);
-//                  angularMomentum = new Vector3d(1, 0, 0);
+                  //                  angularMomentum = new Vector3d(1, 0, 0);
                 }});
                 addEntity(new PhysicsBlock(player.getLocation().add(2, 0, 0), Material.MOSSY_COBBLESTONE_WALL.createBlockData()) {{
                   angularVelocity = new Vector3d(0, 1, 0);
-//                  angularMomentum = new Vector3d(0, 1, 0);
+                  //                  angularMomentum = new Vector3d(0, 1, 0);
                 }});
                 addEntity(new PhysicsBlock(player.getLocation().add(4, 0, 0), Material.STONE_BRICK_WALL.createBlockData()) {{
                   angularVelocity = new Vector3d(0, 0, 1);
-//                  angularMomentum = new Vector3d(0, 0, 1);
+                  //                  angularMomentum = new Vector3d(0, 0, 1);
                 }});
 
-//                for (int i = 0; i < 10; i++) {
-//                  for (int j = 0; j < 10; j++) {
-//                    int finalI = i;
-//                    int finalJ = j;
-//                    addEntity(new PhysicsBlock(player.getLocation().add(finalI * 1.3, (double) (i + j) / 5, finalJ * 1.3), Material.STONE.createBlockData()) {{
-//                      rotation = new Quaterniond().rotateXYZ(finalI * Math.PI / 10, finalJ * Math.PI / 10, 0);
-//                    }});
-//                    addEntity(new PhysicsBlock(player.getLocation().add(15 + finalI * 1.3, (double) (i + j) / 5, finalJ * 1.3), Material.STONE.createBlockData()) {{
-//                      angularVelocity = new Vector3d(0, 0, 1).rotate(new Quaterniond().rotateXYZ(finalI * Math.PI / 10, finalJ * Math.PI / 10, 0));
-//                    }});
-//                  }
-//                }
+                //                for (int i = 0; i < 10; i++) {
+                //                  for (int j = 0; j < 10; j++) {
+                //                    int finalI = i;
+                //                    int finalJ = j;
+                //                    addEntity(new PhysicsBlock(player.getLocation().add(finalI * 1.3, (double) (i + j) / 5, finalJ * 1.3), Material.STONE.createBlockData()) {{
+                //                      rotation = new Quaterniond().rotateXYZ(finalI * Math.PI / 10, finalJ * Math.PI / 10, 0);
+                //                    }});
+                //                    addEntity(new PhysicsBlock(player.getLocation().add(15 + finalI * 1.3, (double) (i + j) / 5, finalJ * 1.3), Material.STONE.createBlockData()) {{
+                //                      angularVelocity = new Vector3d(0, 0, 1).rotate(new Quaterniond().rotateXYZ(finalI * Math.PI / 10, finalJ * Math.PI / 10, 0));
+                //                    }});
+                //                  }
+                //                }
 
 
-//                addEntity(new PhysicsBlock(player.getLocation().add(1, 1, 0), Material.COBWEB.createBlockData()) {{
-////                  angularMomentum = new Vector3d(1, 0, 0);
-//                  rotation = new Quaterniond(new AxisAngle4f((float) (Math.PI / 4), 0, 0, 1));
-//                }});
-////                addEntity(new PhysicsBlock(player.getLocation().add(-1, 1, 0), Material.COBWEB.createBlockData()) {{
-////                  angularMomentum = new Vector3d(-1, 0, 0);
-////                }});
-//                addEntity(new PhysicsBlock(player.getLocation().add(0, 1, 1), Material.COBWEB.createBlockData()) {{
-//                  //                  angularMomentum = new Vector3d(0, 0, 1);
-//                  rotation = new Quaterniond(new AxisAngle4f((float) (Math.PI / 4), 1, 0, 0));
-//                }});
-////                addEntity(new PhysicsBlock(player.getLocation().add(0, 1, -1), Material.COBWEB.createBlockData()) {{
-////                  angularMomentum = new Vector3d(0, 0, -1);
-////                }});
+                //                addEntity(new PhysicsBlock(player.getLocation().add(1, 1, 0), Material.COBWEB.createBlockData()) {{
+                ////                  angularMomentum = new Vector3d(1, 0, 0);
+                //                  rotation = new Quaterniond(new AxisAngle4f((float) (Math.PI / 4), 0, 0, 1));
+                //                }});
+                ////                addEntity(new PhysicsBlock(player.getLocation().add(-1, 1, 0), Material.COBWEB.createBlockData()) {{
+                ////                  angularMomentum = new Vector3d(-1, 0, 0);
+                ////                }});
+                //                addEntity(new PhysicsBlock(player.getLocation().add(0, 1, 1), Material.COBWEB.createBlockData()) {{
+                //                  //                  angularMomentum = new Vector3d(0, 0, 1);
+                //                  rotation = new Quaterniond(new AxisAngle4f((float) (Math.PI / 4), 1, 0, 0));
+                //                }});
+                ////                addEntity(new PhysicsBlock(player.getLocation().add(0, 1, -1), Material.COBWEB.createBlockData()) {{
+                ////                  angularMomentum = new Vector3d(0, 0, -1);
+                ////                }});
 
 
-//          PhysicsWorld.addEntity(new BlockGroup(player.getLocation(), new BlockData[][][] {
-//            {
-//              { Material.STONE.createBlockData(), Material.STONE.createBlockData(), Material.STONE.createBlockData() },
-//              { Material.STONE.createBlockData(), Material.STONE.createBlockData(), Material.STONE.createBlockData() },
-//              { Material.STONE.createBlockData(), Material.STONE.createBlockData(), Material.STONE.createBlockData() },
-//            },
-//            {
-//              { Material.STONE.createBlockData(), Material.STONE.createBlockData(), Material.STONE.createBlockData() },
-//              { Material.STONE.createBlockData(), Material.STONE.createBlockData(), Material.STONE.createBlockData() },
-//              { Material.STONE.createBlockData(), Material.STONE.createBlockData(), Material.STONE.createBlockData() },
-//            },
-//            {
-//              { Material.STONE.createBlockData(), Material.STONE.createBlockData(), Material.STONE.createBlockData() },
-//              { Material.STONE.createBlockData(), Material.STONE.createBlockData(), Material.STONE.createBlockData() },
-//              { Material.STONE.createBlockData(), Material.STONE.createBlockData(), Material.STONE.createBlockData() }
-//            }
-//          }));
+                //          PhysicsWorld.addEntity(new BlockGroup(player.getLocation(), new BlockData[][][] {
+                //            {
+                //              { Material.STONE.createBlockData(), Material.STONE.createBlockData(), Material.STONE.createBlockData() },
+                //              { Material.STONE.createBlockData(), Material.STONE.createBlockData(), Material.STONE.createBlockData() },
+                //              { Material.STONE.createBlockData(), Material.STONE.createBlockData(), Material.STONE.createBlockData() },
+                //            },
+                //            {
+                //              { Material.STONE.createBlockData(), Material.STONE.createBlockData(), Material.STONE.createBlockData() },
+                //              { Material.STONE.createBlockData(), Material.STONE.createBlockData(), Material.STONE.createBlockData() },
+                //              { Material.STONE.createBlockData(), Material.STONE.createBlockData(), Material.STONE.createBlockData() },
+                //            },
+                //            {
+                //              { Material.STONE.createBlockData(), Material.STONE.createBlockData(), Material.STONE.createBlockData() },
+                //              { Material.STONE.createBlockData(), Material.STONE.createBlockData(), Material.STONE.createBlockData() },
+                //              { Material.STONE.createBlockData(), Material.STONE.createBlockData(), Material.STONE.createBlockData() }
+                //            }
+                //          }));
               }))
       .then(new LiteralArgument("area")
               .then(new LocationArgument("location1")
@@ -257,12 +256,13 @@ public final class BlockPhysicsPlugin extends JavaPlugin implements Listener {
                                 for (int x = minX; x <= maxX; x++) {
                                   for (int y = minY; y <= maxY; y++) {
                                     for (int z = minZ; z <= maxZ; z++) {
+                                      if (player.getWorld().getBlockAt(x, y, z).getType().isAir()) continue;
                                       Block block = player.getWorld().getBlockAt(x, y, z);
                                       blockData[x - minX][y - minY][z - minZ] = block.getBlockData();
                                     }
                                   }
                                 }
-                                //              PhysicsWorld.addEntity(new BlockGroup(player.getLocation(), blockData));
+                                PhysicsWorld.addEntity(new BlockGroup(player.getLocation(), blockData));
                               }))))
       .then(new LiteralArgument("particles")
               .executesPlayer((player, args) -> {
@@ -284,16 +284,24 @@ public final class BlockPhysicsPlugin extends JavaPlugin implements Listener {
     new BukkitRunnable() {
       @Override
       public void run() {
-        update();
+        PhysicsWorld.update();
+        Debugger.update();
         showParticles();
       }
     }.runTaskTimer(this, 0, 1);
+
+    ArrayList<Player> players = new ArrayList<>(Bukkit.getOnlinePlayers());
+    if (players.size() == 1) {
+      PhysicsWorld.addEntity(new FloorPlane(players.get(0).getLocation().add(0, -2, 0), 10));
+      Debugger.organizeElementsAround(players.get(0).getLocation().toVector().toVector3d().add(0, 1, 0));
+    }
   }
 
   @Override
   public void onDisable() {
     super.onDisable();
     PhysicsWorld.clear();
+    Debugger.stop();
   }
 
   @Nullable
@@ -309,7 +317,7 @@ public final class BlockPhysicsPlugin extends JavaPlugin implements Listener {
       }
 
       for (PhysicsEntity entity : entities) {
-        if (entity instanceof InteractiveEntity && ((InteractiveEntity) entity).getInteraction().equals(event.getRightClicked())) {
+        if (entity instanceof PhysicsBlock block && block.getInteraction().equals(event.getRightClicked())) {
           playerMovingBlock = entity;
           return;
         }

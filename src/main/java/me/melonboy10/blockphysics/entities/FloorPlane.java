@@ -1,10 +1,14 @@
-package me.melonboy10.blockphysics;
+package me.melonboy10.blockphysics.entities;
 
+import me.melonboy10.blockphysics.core.Mesh;
+import me.melonboy10.blockphysics.core.PhysicsEntity;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.entity.BlockDisplay;
 import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Transformation;
+
+import static me.melonboy10.blockphysics.core.PhysicsWorld.createBlockDisplay;
 
 public class FloorPlane extends PhysicsEntity {
   BlockDisplay blockDisplay;
